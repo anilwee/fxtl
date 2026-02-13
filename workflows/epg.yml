@@ -2,8 +2,17 @@ name: Generate Foxtel EPG
 
 on:
   schedule:
+    # Runs daily at NZT 00:00
+    # NZDT = UTC+13 → 11:00 UTC
     - cron: "0 11 * * *"
+
   workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: "Force refresh EPG"
+        required: false
+        default: "yes"
+
 
 jobs:
   build:
