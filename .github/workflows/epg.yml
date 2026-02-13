@@ -1,9 +1,9 @@
 name: Foxtel EPG Generator
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  workflow_dispatch:
   schedule:
-    - cron: "0 2 * * *"  # 2 AM UTC
+    - cron: "0 2 * * *"
 
 jobs:
   generate-epg:
@@ -13,19 +13,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create config directory
-        run: mkdir -p config data
+      - name: Create directories
+        run: mkdir -p config data public
 
       - name: Copy WebGrab config
         run: |
           if [ -f "WebGrab++.config.xml" ]; then
             cp WebGrab++.config.xml config/
+            echo "✅ Config file copied"
           else
-            echo "ERROR: WebGrab++.config.xml not found in repository!"
+            echo "❌ ERROR: WebGrab++.config.xml not found!"
             exit 1
           fi
 
-      - name: Run WebGrab+Plus Docker container
+      - name: Run WebGrab+Plus
         run: |
           docker run --rm \
             --hostname webgrabplus \
@@ -35,17 +36,15 @@ jobs:
             -e TZ=Pacific/Auckland \
             -v $PWD/config:/config \
             -v $PWD/data:/data \
-            lscr.io/linuxserver/webgrabplus:latest \
-            dotnet /app/WebGrab+Plus.dll
+            lscr.io/linuxserver/webgrabplus:latest
 
-      - name: Process EPG
+      - name: Check and copy EPG
         run: |
-          mkdir -p public
           if [ -f "data/guide.xml" ]; then
             cp data/guide.xml public/epg.xml
-            echo "EPG generated successfully"
+            echo "✅ EPG generated: $(wc -l < data/guide.xml) lines"
           else
-            echo "Failed to generate EPG"
+            echo "❌ No guide.xml generated - check your config"
             exit 1
           fi
 
