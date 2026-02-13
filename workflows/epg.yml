@@ -1,0 +1,46 @@
+name: Generate Foxtel EPG
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Mono
+        run: sudo apt-get update && sudo apt-get install -y mono-complete unzip
+
+      - name: Install WebGrab+
+        run: |
+          wget http://webgrabplus.com/sites/default/files/download/SW/V5.1.0/WebGrabPlus_Linux_Installer.bin
+          chmod +x WebGrabPlus_Linux_Installer.bin
+          sudo ./WebGrabPlus_Linux_Installer.bin
+
+      - name: Download SiteIni Pack
+        run: |
+          mkdir siteini
+          wget -O siteini.zip https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/master.zip
+          unzip siteini.zip -d siteini
+
+      - name: Run Grab
+        run: |
+          WebGrab+Plus --config ./webgrab/WebGrab++.config.xml
+
+      - name: Move output
+        run: |
+          mkdir -p public
+          cp guide.xml public/epg.xml
+
+      - name: Commit updated EPG
+        run: |
+          git config --global user.name "EPG Bot"
+          git config --global user.email "actions@github.com"
+          git add public/epg.xml
+          git commit -m "Daily EPG update" || echo "No changes"
+          git push
