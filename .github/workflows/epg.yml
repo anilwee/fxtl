@@ -23,33 +23,46 @@ jobs:
           wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrabPlus_5.5_install.tar.gz
           tar -zxvf WebGrabPlus_5.5_install.tar.gz
           mkdir -p webgrabplus-bin
+          # Copy all DLLs from the installer package
           find . -name "*.dll" -type f -exec cp {} webgrabplus-bin/ \;
+          find . -name "*.json" -type f -exec cp {} webgrabplus-bin/ \;
 
-      - name: Download SiteIni Pack (Official)
+      - name: Download SiteIni Pack (Official - Working)
         run: |
-          wget https://github.com/WebGrabPlus/webgrabplus-siteinipack/archive/refs/heads/master.zip -O siteini.zip
+          wget https://github.com/webgrabplus/siteinipack-official/archive/refs/heads/main.zip -O siteini.zip
           unzip siteini.zip
           mkdir -p webgrabplus-bin/siteini.pack
-          cp -r webgrabplus-siteinipack-master/siteini.pack/* webgrabplus-bin/siteini.pack/ 2>/dev/null || echo "No siteini files copied"
+          # Copy all siteini files
+          cp -r siteinipack-official-main/siteini.pack/* webgrabplus-bin/siteini.pack/ 2>/dev/null || true
+          echo "SiteIni Pack downloaded and extracted"
 
-      - name: Setup config
+      - name: Setup configuration
         run: |
           mkdir -p webgrabplus-bin/config
-          cp WebGrab++.config.xml webgrabplus-bin/config/
+          if [ -f "WebGrab++.config.xml" ]; then
+            cp WebGrab++.config.xml webgrabplus-bin/config/
+            echo "✅ Config file copied"
+          else
+            echo "❌ WebGrab++.config.xml not found in repository root!"
+            exit 1
+          fi
 
       - name: Run WebGrab+Plus
         run: |
           cd webgrabplus-bin
           dotnet WebGrab+Plus.dll
 
-      - name: Copy EPG
+      - name: Copy EPG output
         run: |
           mkdir -p public
           if [ -f "webgrabplus-bin/guide.xml" ]; then
             cp webgrabplus-bin/guide.xml public/epg.xml
             echo "✅ EPG generated successfully"
+            echo "File size: $(wc -l < webgrabplus-bin/guide.xml) lines"
           else
             echo "❌ No guide.xml generated"
+            # Debug: show what files exist
+            ls -la webgrabplus-bin/
             exit 1
           fi
 
@@ -59,3 +72,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           publish_branch: gh-pages
+          force_orphan: true
