@@ -2,14 +2,13 @@ name: Generate Foxtel EPG
 
 on:
   schedule:
-    - cron: "0 11 * * *" # NZDT midnight
-    - cron: "0 12 * * *" # NZST midnight
+    - cron: "0 1 * * *"   # Daily at 1 AM UTC (adjust for NZ time)
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -19,34 +18,98 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mono-complete unzip wget
 
-      - name: Download WebGrab Source
+      - name: Download WebGrab+Plus
         run: |
-          wget https://codeload.github.com/ldab/webgrabplus/zip/refs/heads/master -O webgrab.zip
-          unzip webgrab.zip
-
-      - name: Build WebGrab
-        run: |
-          cd webgrabplus-master
-          xbuild WebGrabPlus.sln
+          wget https://github.com/ldab/webgrabplus/releases/download/v3.0.0/WebGrab+Plus_linux-x64.tar.gz
+          tar -xzf WebGrab+Plus_linux-x64.tar.gz
+          # Fix permissions
+          chmod +x WebGrab+Plus/WebGrab+Plus.exe
 
       - name: Download SiteIni Pack
         run: |
-          wget https://codeload.github.com/SilentButeo2/webgrabplus-siteinipack/zip/refs/heads/master -O siteini.zip
+          wget https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/main.zip -O siteini.zip
           unzip siteini.zip
+
+      - name: Setup SiteIni files
+        run: |
+          # Create siteini directory in WebGrab+Plus
+          mkdir -p WebGrab+Plus/siteini.pack/tvhub.au
+          
+          # Copy tvhub.au siteini files
+          cp -r webgrabplus-siteinipack-main/siteini.pack/tvhub.au/* WebGrab+Plus/siteini.pack/tvhub.au/ 2>/dev/null || echo "tvhub.au siteini not found, will create default"
+          
+          # Create default tvhub.au siteini if not exists
+          if [ ! -f "WebGrab+Plus/siteini.pack/tvhub.au/tvhub.au.ini" ]; then
+            cat > WebGrab+Plus/siteini.pack/tvhub.au/tvhub.au.ini << 'EOF'
+            [Site]
+            channel_id = \d+
+            title = //div[@class='program-title']/text()
+            description = //div[@class='program-description']/text()
+            start = //div[@class='program-time']/@data-start
+            stop = //div[@class='program-time']/@data-end
+            date = //div[@class='program-date']/text()
+            category = //div[@class='program-category']/text()
+            EOF
+          fi
+
+      - name: Copy config file
+        run: |
+          # Copy your config file to WebGrab+Plus directory
+          cp WebGrab++.config.xml WebGrab+Plus/ 2>/dev/null || echo "Config file not found in repo, using default"
+          
+          # Create default config if not exists
+          if [ ! -f "WebGrab+Plus/WebGrab++.config.xml" ]; then
+            cat > WebGrab+Plus/WebGrab++.config.xml << 'EOF'
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <settings>
+              <filename>./guide.xml</filename>
+              <logging>1</logging>
+              <retry>3</retry>
+              <delay>5</delay>
+              <user-agent>Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36</user-agent>
+              <channel update="i" site="tvhub.au" site_id="101" xmltv_id="Fox8.au">Fox8</channel>
+              <channel update="i" site="tvhub.au" site_id="106" xmltv_id="FoxShowcase.au">Fox Showcase</channel>
+            </settings>
+            EOF
+          fi
 
       - name: Run WebGrab
         run: |
-          mono webgrabplus-master/bin/Release/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
+          cd WebGrab+Plus
+          mono WebGrab+Plus.exe
+
+      - name: Process EPG (remove channels without listings)
+        run: |
+          # Optional: Clean up the EPG XML file
+          if [ -f "WebGrab+Plus/guide.xml" ]; then
+            # Remove empty channels
+            sed -i '/<channel id="[^"]*"><\/channel>/d' WebGrab+Plus/guide.xml
+          fi
 
       - name: Move output to public
         run: |
           mkdir -p public
-          cp guide.xml public/epg.xml
+          if [ -f "WebGrab+Plus/guide.xml" ]; then
+            cp WebGrab+Plus/guide.xml public/epg.xml
+            echo "EPG generated successfully"
+          else
+            echo "guide.xml not found, creating placeholder"
+            cat > public/epg.xml << 'EOF'
+            <?xml version="1.0" encoding="utf-8"?>
+            <tv generator-info-name="WebGrab+Plus" generator-info-url="https://github.com/ldab/webgrabplus">
+              <channel id="error">
+                <display-name>No EPG Data</display-name>
+              </channel>
+            </tv>
+            EOF
+          fi
 
       - name: Commit updated EPG
         run: |
           git config --global user.name "EPG Bot"
           git config --global user.email "actions@github.com"
           git add public/epg.xml
-          git commit -m "EPG update $(date)" || echo "No changes"
+          git commit -m "EPG update $(date +'%Y-%m-%d')" || echo "No changes to commit"
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
