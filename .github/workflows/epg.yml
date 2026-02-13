@@ -13,48 +13,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Mono
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mono-complete unzip wget
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
 
-      - name: Download WebGrab+Plus binary
+      - name: Install WebGrab+Plus as global tool
         run: |
-          # Download the Windows/Linux binary directly
-          wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrab+Plus_V5.5.0_generic.zip
-          unzip WebGrab+Plus_V5.5.0_generic.zip -d webgrabplus
-          chmod +x webgrabplus/WebGrab+Plus.exe
-
-      - name: Setup config and siteini
-        run: |
-          mkdir -p webgrabplus/config
-          cp WebGrab++.config.xml webgrabplus/config/
-          
-          # Download siteini pack
-          wget https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/main.zip -O siteini.zip
-          unzip siteini.zip
-          cp -r webgrabplus-siteinipack-main/siteini.pack/* webgrabplus/siteini.pack/ 2>/dev/null || mkdir -p webgrabplus/siteini.pack
+          dotnet tool install --global WebGrabPlus --version 5.5.0
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Run WebGrab+Plus
         run: |
-          cd webgrabplus
-          mono WebGrab+Plus.exe -c ./config/WebGrab++.config.xml
+          mkdir -p wg-config
+          cp WebGrab++.config.xml wg-config/
+          cd wg-config
+          webgrabplus
 
-      - name: Copy EPG
+      - name: Deploy EPG
         run: |
           mkdir -p public
-          if [ -f "webgrabplus/guide.xml" ]; then
-            cp webgrabplus/guide.xml public/epg.xml
-            echo "✅ EPG generated: $(wc -l < webgrabplus/guide.xml) lines"
-          else
-            echo "❌ No guide.xml generated"
-            exit 1
-          fi
-
+          cp wg-config/guide.xml public/epg.xml
+          
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           publish_branch: gh-pages
-          force_orphan: true
