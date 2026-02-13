@@ -1,0 +1,8 @@
+<settings>
+  <filename>guide.xml</filename>
+  <mode>n</mode>
+</settings>
+
+<channel update="i" site="foxtel.com.au" site_id="168" xmltv_id="FOX8">FOX8</channel>
+<channel update="i" site="foxtel.com.au" site_id="168" xmltv_id="FOX SPORTS 1">FOX SPORTS 1</channel>
+<channel update="i" site="foxtel.com.au" site_id="168" xmltv_id="Sky News">Sky News</channel>
