@@ -21,12 +21,12 @@ jobs:
 
       - name: Clone WebGrab Source
         run: |
-          git clone https://github.com/SilentButeo2/webgrabplus.git
+          git clone https://github.com/ldab/webgrabplus.git
 
       - name: Build WebGrab
         run: |
           cd webgrabplus
-          xbuild WebGrab+Plus.sln
+          xbuild WebGrabPlus.sln
 
       - name: Download SiteIni Pack
         run: |
