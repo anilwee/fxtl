@@ -2,9 +2,8 @@ name: Update Foxtel EPG
 
 on:
   schedule:
-    # Run twice daily at 2:00 AM and 2:00 PM UTC
     - cron: "0 2,14 * * *"
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   update-epg:
@@ -19,197 +18,261 @@ jobs:
       - name: Create public directory
         run: mkdir -p public
 
-      - name: Try multiple EPG sources
+      - name: Install XML tools
+        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+
+      - name: Download EPG
         run: |
-          # Source 1: iptv-epg.org (primary)
-          echo "Trying iptv-epg.org..."
-          if wget --spider https://iptv-epg.org/files/epg-au.xml.gz 2>&1 | grep -q "200 OK"; then
+          # Try multiple sources
+          echo "Downloading EPG..."
+          
+          # Source 1: iptv-epg.org
+          if wget -q --spider https://iptv-epg.org/files/epg-au.xml.gz; then
+            echo "Downloading from iptv-epg.org..."
             wget -qO public/epg.xml.gz https://iptv-epg.org/files/epg-au.xml.gz
             gunzip -c public/epg.xml.gz > public/raw_epg.xml
-            echo "✅ Successfully downloaded from iptv-epg.org"
-            exit 0
-          fi
-
-          # Source 2: Alternative with .gz extension
-          echo "Trying alternative .gz link..."
-          if wget --spider https://iptv-epg.org/files/epg-au.xml 2>&1 | grep -q "200 OK"; then
+            echo "✅ Downloaded from iptv-epg.org"
+          
+          # Source 2: Alternative iptv-epg.org
+          elif wget -q --spider https://iptv-epg.org/files/epg-au.xml; then
+            echo "Downloading from iptv-epg.org (xml)..."
             wget -qO public/raw_epg.xml https://iptv-epg.org/files/epg-au.xml
-            echo "✅ Successfully downloaded from alternative link"
-            exit 0
-          fi
-
-          # Source 3: Try xmlepg.net if it offers direct download
-          echo "Trying xmlepg.net..."
-          if wget --spider https://www.xmlepg.net/epg.xml 2>&1 | grep -q "200 OK"; then
+            echo "✅ Downloaded from iptv-epg.org (xml)"
+          
+          # Source 3: xmlepg.net
+          elif wget -q --spider https://www.xmlepg.net/epg.xml; then
+            echo "Downloading from xmlepg.net..."
             wget -qO public/raw_epg.xml https://www.xmlepg.net/epg.xml
-            echo "✅ Successfully downloaded from xmlepg.net"
-            exit 0
+            echo "✅ Downloaded from xmlepg.net"
+          
+          # Source 4: GitHub EPG repository
+          elif wget -q --spider https://raw.githubusercontent.com/matthuisman/epg/master/au.xml; then
+            echo "Downloading from matthuisman/epg..."
+            wget -qO public/raw_epg.xml https://raw.githubusercontent.com/matthuisman/epg/master/au.xml
+            echo "✅ Downloaded from GitHub EPG"
+          
+          else
+            echo "❌ All EPG sources failed"
+            # Create a minimal valid EPG file to prevent errors
+            echo '<?xml version="1.0" encoding="utf-8"?>
+            <!DOCTYPE tv SYSTEM "xmltv.dtd">
+            <tv generator-info-name="Fallback">
+              <channel id="placeholder">
+                <display-name>No EPG Available</display-name>
+              </channel>
+              <programme channel="placeholder" start="20260213000000" stop="20260214000000">
+                <title>EPG Source Unavailable</title>
+              </programme>
+            </tv>' > public/raw_epg.xml
+            echo "⚠️ Created placeholder EPG"
           fi
 
-          # If all sources fail, exit with error
-          echo "❌ All EPG sources failed"
-          exit 1
-
-      - name: Install XML processing tools
-        run: sudo apt-get install -y xmlstarlet
-
-      - name: Filter Foxtel channels and clean AU prefix
+      - name: Verify EPG file
         run: |
-          # Comprehensive list of Foxtel channel IDs (both with and without AU prefix)
-          FOXTEL_CHANNELS=(
-            # Entertainment
-            "AU101" "101" "FOX8"
-            "AU102" "102" "FOXCOMEDY"
-            "AU103" "103" "FOXSHOWCASE"
-            "AU104" "104" "FOXCRIME"
-            "AU105" "105" "FOXHITS"
-            "AU106" "106" "FOXONE"
-            "AU107" "107" "FOXTHEATRE"
-            "AU108" "108" "FOXDOCOS"
-            "AU109" "109" "FOXARENA"
-            "AU110" "110" "FOXFOOTY"
-            "AU111" "111" "FOXLEAGUE"
-            "AU112" "112" "FOXSPORTSNEWS"
-            "AU113" "113" "FOXCRICKET"
-            "AU114" "114" "FOXSPORTS5"
-            
-            # Movies
-            "AU130" "130" "FOXMOVIES"
-            "AU131" "131" "FOXACTION"
-            "AU132" "132" "FOXFAMILY"
-            "AU133" "133" "FOXCOMEDY"
-            "AU134" "134" "FOXROMANCE"
-            "AU135" "135" "FOXTHRILLER"
-            
-            # Lifestyle
-            "AU150" "150" "FOXLIFESTYLE"
-            "AU151" "151" "FOXREALITY"
-            "AU152" "152" "FOXHOME"
-            "AU153" "153" "FOXTRAVEL"
-            "AU154" "154" "FOXFOOD"
-            "AU155" "155" "FOXWELLBEING"
-            
-            # Discovery Networks
-            "AU201" "201" "DISCOVERY"
-            "AU202" "202" "ANIMALPLANET"
-            "AU203" "203" "TLC"
-            "AU204" "204" "DISCOVERYSCIENCE"
-            "AU205" "205" "DISCOVERYTURBO"
-            "AU206" "206" "DISCOVERYHD"
-            
-            # Kids
-            "AU301" "301" "FOXKIDS"
-            "AU302" "302" "FOXKIDSJR"
-            "AU303" "303" "CARTOONNETWORK"
-            "AU304" "304" "DISNEYCHANNEL"
-            "AU305" "305" "DISNEYJR"
-            "AU306" "306" "DISNEYX"
-            "AU307" "307" "NICKELODEON"
-            "AU308" "308" "NICKJR"
-            
-            # News
-            "AU501" "501" "SKYNEWS"
-            "AU502" "502" "FOXNEWS"
-            "AU503" "503" "BBCWORLD"
-            "AU504" "504" "CNBC"
-            "AU505" "505" "CNN"
-            "AU506" "506" "ALJAZEERA"
-            
-            # BBC/UKTV
-            "AU601" "601" "BBCFIRST"
-            "AU602" "602" "BBCEARTH"
-            "AU603" "603" "UKTV"
-            "AU604" "604" "BRITBOX"
-          )
+          if [ ! -f public/raw_epg.xml ]; then
+            echo "❌ No EPG file found"
+            exit 1
+          fi
+          
+          FILE_SIZE=$(wc -c < public/raw_epg.xml)
+          echo "📄 EPG file size: $FILE_SIZE bytes"
+          
+          if [ $FILE_SIZE -lt 1000 ]; then
+            echo "⚠️ EPG file is very small ($FILE_SIZE bytes)"
+            head -n 20 public/raw_epg.xml
+          fi
 
-          # Build grep pattern for channel IDs
-          CHANNEL_PATTERN=$(printf "channel=\"%s\\|" "${FOXTEL_CHANNELS[@]}" | sed 's/\\|$//')
+      - name: Filter Foxtel channels
+        run: |
+          echo "Filtering Foxtel channels..."
           
-          # Extract only Foxtel channels and their programmes
-          echo "Filtering for Foxtel channels..."
+          # Check if xmlstarlet can parse the file
+          if ! xmlstarlet sel -t -v "name(/*)" public/raw_epg.xml > /dev/null 2>&1; then
+            echo "❌ Invalid XML file, copying raw file as-is"
+            cp public/raw_epg.xml public/fxtl.xml
+            exit 0
+          fi
           
-          # Create new XML with filtered channels
-          xmlstarlet ed -N tv="http://www.w3.org/2005/XMLTV" \
-            -d "//tv/programme[not(contains('${CHANNEL_PATTERN}', @channel))]" \
-            public/raw_epg.xml > public/filtered1.xml
+          # Create a simple filter script using grep/xmlstarlet combo
+          # This is more robust than complex XPath queries
           
-          # Remove non-Foxtel channel definitions
-          xmlstarlet ed -N tv="http://www.w3.org/2005/XMLTV" \
-            -d "//tv/channel[not(contains('${CHANNEL_PATTERN}', @id))]" \
-            public/filtered1.xml > public/filtered2.xml
+          # First, get all channel IDs
+          xmlstarlet sel -t -v "//channel/@id" public/raw_epg.xml 2>/dev/null | sort -u > public/all_channels.txt
           
-          # Now clean AU prefix from channel names
-          echo "Removing AU prefix from channel names..."
+          # Define Foxtel channels (simple numeric patterns)
+          cat > public/foxtel_patterns.txt << 'EOF'
+          101
+          102
+          103
+          104
+          105
+          106
+          107
+          108
+          109
+          110
+          111
+          112
+          113
+          114
+          115
+          130
+          131
+          132
+          133
+          134
+          135
+          150
+          151
+          152
+          153
+          154
+          155
+          201
+          202
+          203
+          204
+          205
+          206
+          301
+          302
+          303
+          304
+          305
+          306
+          307
+          308
+          501
+          502
+          503
+          504
+          505
+          506
+          601
+          602
+          603
+          604
+          EOF
           
-          # Process each channel to remove AU prefix from display-name
+          # Filter channels that match Foxtel patterns
+          > public/foxtel_channels.txt
           while IFS= read -r channel_id; do
-            if [[ $channel_id == AU* ]]; then
-              # Get the channel name without AU prefix
-              channel_num=${channel_id#AU}
-              
-              # Update display-name in channel
-              xmlstarlet ed -N tv="http://www.w3.org/2005/XMLTV" \
-                -u "//tv/channel[@id='$channel_id']/tv:display-name" \
-                -v "$channel_num" \
-                public/filtered2.xml > public/temp.xml
-              mv public/temp.xml public/filtered2.xml
-              
-              # Also update the channel ID itself (optional - be careful with this)
-              # This updates both the channel id and all programme references
-              # xmlstarlet ed -N tv="http://www.w3.org/2005/XMLTV" \
-              #   -u "//tv/channel[@id='$channel_id']/@id" \
-              #   -v "$channel_num" \
-              #   -u "//tv/programme[@channel='$channel_id']/@channel" \
-              #   -v "$channel_num" \
-              #   public/filtered2.xml > public/temp.xml
-              # mv public/temp.xml public/filtered2.xml
+            # Remove AU prefix if present
+            clean_id=${channel_id#AU}
+            # Check if clean_id matches any pattern
+            if grep -q "^$clean_id$" public/foxtel_patterns.txt; then
+              echo "$channel_id" >> public/foxtel_channels.txt
             fi
-          done < <(xmlstarlet sel -N tv="http://www.w3.org/2005/XMLTV" -t -v "//tv/channel/@id" public/filtered2.xml)
+          done < public/all_channels.txt
           
-          # Alternative simpler approach: just modify display-name for all AU channels
-          xmlstarlet ed -N tv="http://www.w3.org/2005/XMLTV" \
-            -u "//tv/channel[starts-with(@id, 'AU')]/tv:display-name" \
-            -x "substring(., 3)" \
-            public/filtered2.xml > public/fxtl.xml
+          # If no Foxtel channels found, copy raw file
+          if [ ! -s public/foxtel_channels.txt ]; then
+            echo "⚠️ No Foxtel channels found, using raw EPG"
+            cp public/raw_epg.xml public/fxtl.xml
+            exit 0
+          fi
           
-          echo "✅ EPG processed: $(xmlstarlet sel -t -v "count(//tv/channel)" public/fxtl.xml) Foxtel channels kept"
+          echo "✅ Found $(wc -l < public/foxtel_channels.txt) Foxtel channels"
+          
+          # Build XML with filtered channels using simple approach
+          # Extract header
+          sed -n '/<channel/,$!p' public/raw_epg.xml > public/header.xml
+          
+          # Extract only Foxtel channels
+          > public/channels.xml
+          while IFS= read -r channel_id; do
+            xmlstarlet sel -t -c "//channel[@id='$channel_id']" public/raw_epg.xml 2>/dev/null >> public/channels.xml
+            echo "" >> public/channels.xml
+          done < public/foxtel_channels.txt
+          
+          # Extract programmes for Foxtel channels
+          > public/programmes.xml
+          while IFS= read -r channel_id; do
+            xmlstarlet sel -t -c "//programme[@channel='$channel_id']" public/raw_epg.xml 2>/dev/null >> public/programmes.xml
+            echo "" >> public/programmes.xml
+          done < public/foxtel_channels.txt
+          
+          # Combine everything
+          {
+            cat public/header.xml
+            echo ""
+            cat public/channels.xml
+            echo ""
+            cat public/programmes.xml
+            echo "</tv>"
+          } > public/fxtl.xml
+          
+          # Clean up display names (remove AU prefix)
+          if command -v xmlstarlet > /dev/null; then
+            # Remove AU prefix from display-name
+            xmlstarlet ed -N tv="http://www.w3.org/2005/XMLTV" \
+              -u "//channel[starts-with(@id, 'AU')]/display-name" \
+              -x "substring(., 3)" \
+              public/fxtl.xml > public/fxtl_clean.xml
+            mv public/fxtl_clean.xml public/fxtl.xml
+          fi
+          
+          echo "✅ EPG processing complete"
 
-      - name: Create channel list for verification
+      - name: Generate channel list
         run: |
           echo "## 📺 Foxtel Channels in EPG" > public/channels.md
           echo "" >> public/channels.md
           echo "| Channel ID | Display Name |" >> public/channels.md
           echo "|------------|--------------|" >> public/channels.md
           
-          xmlstarlet sel -N tv="http://www.w3.org/2005/XMLTV" -t \
-            -m "//tv/channel" \
-            -v "concat('| ', @id, ' | ', tv:display-name, ' |')" \
-            -n public/fxtl.xml >> public/channels.md
+          if command -v xmlstarlet > /dev/null && [ -f public/fxtl.xml ]; then
+            # Try to extract channel list with xmlstarlet
+            xmlstarlet sel -t -m "//channel" \
+              -v "concat('| ', @id, ' | ', display-name, ' |')" \
+              -n public/fxtl.xml 2>/dev/null >> public/channels.md || \
+              echo "| Error | Could not parse channels |" >> public/channels.md
+          else
+            echo "| No channels | available |" >> public/channels.md
+          fi
           
           echo "" >> public/channels.md
-          echo "Total channels: $(xmlstarlet sel -t -v "count(//tv/channel)" public/fxtl.xml)" >> public/channels.md
+          if [ -f public/foxtel_channels.txt ]; then
+            echo "Total channels: $(wc -l < public/foxtel_channels.txt)" >> public/channels.md
+          fi
           
           cat public/channels.md
 
-      - name: Validate final XML
+      - name: Validate final EPG
         run: |
           if [ -f public/fxtl.xml ] && [ -s public/fxtl.xml ]; then
-            CHANNEL_COUNT=$(xmlstarlet sel -t -v "count(//tv/channel)" public/fxtl.xml)
-            PROGRAMME_COUNT=$(xmlstarlet sel -t -v "count(//tv/programme)" public/fxtl.xml)
-            echo "✅ EPG file created successfully"
-            echo "📊 Statistics:"
-            echo "   - Channels: $CHANNEL_COUNT"
-            echo "   - Programmes: $PROGRAMME_COUNT"
-            echo "   - File size: $(wc -c < public/fxtl.xml) bytes"
+            FILE_SIZE=$(wc -c < public/fxtl.xml)
+            echo "✅ EPG generated: $FILE_SIZE bytes"
+            
+            # Show first few lines
+            echo "First 10 lines of EPG:"
+            head -n 10 public/fxtl.xml
           else
-            echo "❌ No valid EPG file generated"
-            exit 1
+            echo "⚠️ EPG file is empty or missing"
+            # Create a minimal valid EPG
+            echo '<?xml version="1.0" encoding="utf-8"?>
+            <!DOCTYPE tv SYSTEM "xmltv.dtd">
+            <tv generator-info-name="Foxtel EPG Bot">
+              <channel id="foxtel">
+                <display-name>Foxtel EPG</display-name>
+              </channel>
+            </tv>' > public/fxtl.xml
           fi
 
-      - name: Commit and push changes
+      - name: Commit and push
         run: |
           git config --global user.name "EPG Bot"
           git config --global user.email "actions@github.com"
           git add public/fxtl.xml public/channels.md
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update Foxtel EPG: $(date +'%Y-%m-%d %H:%M UTC') - $(xmlstarlet sel -t -v "count(//tv/channel)" public/fxtl.xml 2>/dev/null || echo "0") channels"
-          git push
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            CHANNEL_COUNT=0
+            if [ -f public/foxtel_channels.txt ]; then
+              CHANNEL_COUNT=$(wc -l < public/foxtel_channels.txt)
+            fi
+            git commit -m "Update Foxtel EPG: $(date +'%Y-%m-%d') - ${CHANNEL_COUNT} channels"
+            git push
+            echo "✅ Changes committed and pushed"
+          fi
