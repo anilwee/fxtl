@@ -1,8 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <settings>
-  <filename>guide.xml</filename>
-  <mode>n</mode>
+  <filename>./guide.xml</filename>
+  <logging>1</logging>
+  <retry>3</retry>
+  <delay>5</delay>
+  <user-agent>Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36</user-agent>
+  
+  <channel update="i" site="tvhub.au" site_id="101" xmltv_id="Fox8.au">Fox8</channel>
+  <channel update="i" site="tvhub.au" site_id="106" xmltv_id="FoxShowcase.au">Fox Showcase</channel>
+  <channel update="i" site="tvhub.au" site_id="107" xmltv_id="FoxOne.au">Fox One</channel>
+  <channel update="i" site="tvhub.au" site_id="108" xmltv_id="Fox11.au">Fox 11</channel>
+  <channel update="i" site="tvhub.au" site_id="109" xmltv_id="FoxComedy.au">Fox Comedy</channel>
+  <channel update="i" site="tvhub.au" site_id="111" xmltv_id="FoxCrime.au">Fox Crime</channel>
+  <channel update="i" site="tvhub.au" site_id="112" xmltv_id="FoxFam.au">Fox Family</channel>
+  <channel update="i" site="tvhub.au" site_id="113" xmltv_id="FoxSciFi.au">Fox Sci-Fi</channel>
+  <channel update="i" site="tvhub.au" site_id="114" xmltv_id="FoxNews.au">Fox News</channel>
+  <channel update="i" site="tvhub.au" site_id="115" xmltv_id="FoxSports.au">Fox Sports</channel>
+  <channel update="i" site="tvhub.au" site_id="116" xmltv_id="FoxSports2.au">Fox Sports 2</channel>
+  <channel update="i" site="tvhub.au" site_id="117" xmltv_id="FoxSports3.au">Fox Sports 3</channel>
+  <channel update="i" site="tvhub.au" site_id="118" xmltv_id="FoxSports4.au">Fox Sports 4</channel>
+  <channel update="i" site="tvhub.au" site_id="119" xmltv_id="FoxSports5.au">Fox Sports 5</channel>
+  <channel update="i" site="tvhub.au" site_id="120" xmltv_id="FoxCricket.au">Fox Cricket</channel>
+  <channel update="i" site="tvhub.au" site_id="121" xmltv_id="FoxLeague.au">Fox League</channel>
+  <channel update="i" site="tvhub.au" site_id="122" xmltv_id="FoxFooty.au">Fox Footy</channel>
+  <channel update="i" site="tvhub.au" site_id="123" xmltv_id="ESPN.au">ESPN</channel>
+  <channel update="i" site="tvhub.au" site_id="124" xmltv_id="ESPN2.au">ESPN 2</channel>
+  <channel update="i" site="tvhub.au" site_id="125" xmltv_id="NatGeo.au">National Geographic</channel>
+  <channel update="i" site="tvhub.au" site_id="126" xmltv_id="NatGeoWild.au">Nat Geo Wild</channel>
+  <channel update="i" site="tvhub.au" site_id="127" xmltv_id="Discovery.au">Discovery</channel>
+  <channel update="i" site="tvhub.au" site_id="128" xmltv_id="TLC.au">TLC</channel>
+  <channel update="i" site="tvhub.au" site_id="129" xmltv_id="AnimalPlanet.au">Animal Planet</channel>
+  <channel update="i" site="tvhub.au" site_id="130" xmltv_id="History.au">History Channel</channel>
+  <channel update="i" site="tvhub.au" site_id="131" xmltv_id="MTV.au">MTV</channel>
+  <channel update="i" site="tvhub.au" site_id="132" xmltv_id="Nickelodeon.au">Nickelodeon</channel>
+  <channel update="i" site="tvhub.au" site_id="133" xmltv_id="CartoonNetwork.au">Cartoon Network</channel>
+  <channel update="i" site="tvhub.au" site_id="134" xmltv_id="Boomerang.au">Boomerang</channel>
+  <channel update="i" site="tvhub.au" site_id="135" xmltv_id="BBCFirst.au">BBC First</channel>
+  <channel update="i" site="tvhub.au" site_id="136" xmltv_id="BBCUKTV.au">BBC UKTV</channel>
+  <channel update="i" site="tvhub.au" site_id="137" xmltv_id="Arena.au">Arena</channel>
+  <channel update="i" site="tvhub.au" site_id="138" xmltv_id="Style.au">Style</channel>
+  <channel update="i" site="tvhub.au" site_id="139" xmltv_id="BoxSets.au">BoxSets</channel>
 </settings>
-
-<channel update="i" site="foxtel.com.au" site_id="168" xmltv_id="FOX8">FOX8</channel>
-<channel update="i" site="foxtel.com.au" site_id="168" xmltv_id="FOX SPORTS 1">FOX SPORTS 1</channel>
-<channel update="i" site="foxtel.com.au" site_id="168" xmltv_id="Sky News">Sky News</channel>
