@@ -1,0 +1,82 @@
+name: Update Foxtel EPG
+
+on:
+  schedule:
+    # Run twice daily at 2:00 AM and 2:00 PM UTC
+    - cron: "0 2,14 * * *"
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-epg:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create public directory
+        run: mkdir -p public
+
+      - name: Try multiple EPG sources
+        run: |
+          # Source 1: iptv-epg.org (primary)
+          echo "Trying iptv-epg.org..."
+          wget --spider https://iptv-epg.org/files/epg-au.xml.gz 2>&1 | grep -q "200 OK"
+          if [ $? -eq 0 ]; then
+            wget -qO public/epg.xml.gz https://iptv-epg.org/files/epg-au.xml.gz
+            gunzip -c public/epg.xml.gz > public/fxtl.xml
+            echo "✅ Successfully downloaded from iptv-epg.org"
+            exit 0
+          fi
+
+          # Source 2: Alternative with .gz extension
+          echo "Trying alternative .gz link..."
+          wget --spider https://iptv-epg.org/files/epg-au.xml 2>&1 | grep -q "200 OK"
+          if [ $? -eq 0 ]; then
+            wget -qO public/fxtl.xml https://iptv-epg.org/files/epg-au.xml
+            echo "✅ Successfully downloaded from alternative link"
+            exit 0
+          fi
+
+          # Source 3: Try xmlepg.net if it offers direct download
+          echo "Trying xmlepg.net..."
+          wget --spider https://www.xmlepg.net/epg.xml 2>&1 | grep -q "200 OK"
+          if [ $? -eq 0 ]; then
+            wget -qO public/fxtl.xml https://www.xmlepg.net/epg.xml
+            echo "✅ Successfully downloaded from xmlepg.net"
+            exit 0
+          fi
+
+          # If all sources fail, create a placeholder
+          echo '<?xml version="1.0" encoding="utf-8"?>
+          <tv generator-info-name="Fallback" generator-info-url="https://github.com/${{ github.repository }}">
+            <channel id="fallback">
+              <display-name>Fallback Channel</display-name>
+            </channel>
+            <programme channel="fallback" start="20260213000000" stop="20260214000000">
+              <title>EPG Source Temporarily Unavailable</title>
+              <desc>Please check the workflow run for details.</desc>
+            </programme>
+          </tv>' > public/fxtl.xml
+          echo "⚠️ All sources failed. Created placeholder EPG."
+          exit 1
+
+      - name: Validate XML (basic check)
+        run: |
+          if [ -f public/fxtl.xml ]; then
+            echo "✅ EPG file size: $(wc -c < public/fxtl.xml) bytes"
+            head -n 5 public/fxtl.xml
+          else
+            echo "❌ No EPG file generated"
+            exit 1
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "EPG Bot"
+          git config --global user.email "actions@github.com"
+          git add public/fxtl.xml
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update EPG: $(date +'%Y-%m-%d %H:%M UTC')"
+          git push
