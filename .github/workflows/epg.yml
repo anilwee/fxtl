@@ -1,4 +1,4 @@
-name: Foxtel EPG Generator
+name: Foxtel EPG Generator (Direct DLL)
 
 on:
   workflow_dispatch:
@@ -13,29 +13,55 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 9.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      - name: Install WebGrab+Plus as global tool
+      - name: Download WebGrab+Plus
         run: |
-          dotnet tool install --global WebGrabPlus --version 5.5.0
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      - name: Run WebGrab+Plus
+          wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrabPlus_5.5_install.tar.gz
+          tar -zxvf WebGrabPlus_5.5_install.tar.gz
+          
+      - name: Extract DLL directly
         run: |
-          mkdir -p wg-config
-          cp WebGrab++.config.xml wg-config/
-          cd wg-config
-          webgrabplus
-
-      - name: Deploy EPG
+          # The DLL is inside the installer package
+          find . -name "WebGrab+Plus.dll" -type f
+          # Copy it to a known location
+          mkdir -p webgrabplus-bin
+          find . -name "WebGrab+Plus.dll" -type f -exec cp {} webgrabplus-bin/ \;
+          find . -name "*.dll" -type f -exec cp {} webgrabplus-bin/ \;
+          
+      - name: Setup config
+        run: |
+          mkdir -p webgrabplus-bin/config
+          cp WebGrab++.config.xml webgrabplus-bin/config/
+          
+      - name: Download siteini pack
+        run: |
+          wget https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/main.zip -O siteini.zip
+          unzip siteini.zip
+          mkdir -p webgrabplus-bin/siteini.pack
+          cp -r webgrabplus-siteinipack-main/siteini.pack/* webgrabplus-bin/siteini.pack/ 2>/dev/null || true
+          
+      - name: Run WebGrab+Plus with dotnet
+        run: |
+          cd webgrabplus-bin
+          dotnet WebGrab+Plus.dll
+          
+      - name: Copy EPG
         run: |
           mkdir -p public
-          cp wg-config/guide.xml public/epg.xml
+          if [ -f "webgrabplus-bin/guide.xml" ]; then
+            cp webgrabplus-bin/guide.xml public/epg.xml
+            echo "✅ EPG generated successfully"
+          else
+            echo "❌ No guide.xml generated"
+            ls -la webgrabplus-bin/
+            exit 1
+          fi
           
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
