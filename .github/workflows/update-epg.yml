@@ -1,47 +1,4 @@
-name: Update Foxtel EPG
-
-on:
-  schedule:
-    - cron: "0 2,14 * * *"
-  workflow_dispatch:
-
-jobs:
-  update-epg:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Create public directory
-        run: mkdir -p public
-
-      - name: Install XML tools
-        run: sudo apt-get update && sudo apt-get install -y xmlstarlet python3-lxml
-
-      - name: Download EPG
-        run: |
-          echo "Downloading EPG from iptv-epg.org..."
-          wget -qO public/epg.xml.gz https://iptv-epg.org/files/epg-au.xml.gz || true
-          
-          if [ -f public/epg.xml.gz ] && [ -s public/epg.xml.gz ]; then
-            gunzip -c public/epg.xml.gz > public/raw_epg.xml
-            echo "✅ EPG downloaded and extracted"
-          else
-            echo "❌ Failed to download, trying direct xml..."
-            wget -qO public/raw_epg.xml https://iptv-epg.org/files/epg-au.xml || true
-          fi
-          
-          if [ ! -s public/raw_epg.xml ]; then
-            echo "❌ All downloads failed"
-            exit 1
-          fi
-          
-          echo "EPG file size: $(wc -c < public/raw_epg.xml) bytes"
-
-      - name: Filter ONLY Foxtel channels and remove "AU - " prefix
+      - name: Filter ONLY Foxtel channels and remove "AU - " prefix completely
         run: |
           echo "🔍 Starting aggressive Foxtel-only filtering..."
           
@@ -78,7 +35,7 @@ jobs:
                   'PREMIER', 'RACING', 'OUTDOOR', 'WARNER', 'UNIVERSAL',
                   '13TH', 'E!', 'SYFY', 'CARTON', 'CBeebies', 'BOLD',
                   'PEACH', 'SHAKE', 'MATE', 'FLIX', 'GEM', 'GO', 'LIFE',
-                  'RUSH', '111', '112', 'HITS', 'ONE', 'SHOWCASE',
+                  'RUSH', 'HITS', 'ONE', 'SHOWCASE',
                   'CRICKET', 'FOOTY', 'LEAGUE', 'THEATRE', 'ARTS',
                   'ULTRA', 'HD', 'KIDS', 'JR', 'XD', 'PLUS', 'ON DEMAND'
               ]
@@ -140,14 +97,26 @@ jobs:
                           new_elem = ET.SubElement(new_channel, elem.tag, elem.attrib)
                           if elem.text:
                               if elem.tag.endswith('display-name'):
-                                  # Clean the display name - remove "AU - " and just "AU " prefixes
+                                  # Clean the display name - remove "AU - " prefix completely
                                   cleaned_text = elem.text
-                                  # Remove patterns like "AU - ", "AU-", "AU " at the beginning
-                                  cleaned_text = re.sub(r'^AU\s*-\s*', '', cleaned_text)  # Removes "AU - "
-                                  cleaned_text = re.sub(r'^AU\s+', '', cleaned_text)      # Removes "AU " 
-                                  cleaned_text = re.sub(r'^AU-', '', cleaned_text)        # Removes "AU-"
+                                  
+                                  # Print original for debugging
+                                  print(f"Original: '{cleaned_text}'")
+                                  
+                                  # Remove "AU - " prefix (with various spacings)
+                                  cleaned_text = re.sub(r'^AU\s*-\s*', '', cleaned_text)  # Removes "AU - ", "AU-", "AU -"
+                                  cleaned_text = re.sub(r'^AU\s+', '', cleaned_text)      # Removes "AU " (just in case)
+                                  
+                                  # Also remove any standalone "- " that might remain
+                                  cleaned_text = re.sub(r'^-\s+', '', cleaned_text)
+                                  
+                                  # Trim any remaining whitespace
+                                  cleaned_text = cleaned_text.strip()
+                                  
+                                  print(f"Cleaned:  '{cleaned_text}'")
+                                  print("---")
+                                  
                                   new_elem.text = cleaned_text
-                                  print(f"Cleaned: '{elem.text}' -> '{cleaned_text}'")
                               else:
                                   new_elem.text = elem.text
                           else:
@@ -192,7 +161,7 @@ jobs:
                   lines = f.readlines()
                   sample_count = 0
                   for line in lines:
-                      if '<display-name>' in line and sample_count < 10:
+                      if '<display-name>' in line and sample_count < 20:
                           print(line.strip())
                           sample_count += 1
               
@@ -206,81 +175,24 @@ jobs:
           # Run the Python script
           python3 public/filter_epg.py
           
-          # Verify no "AU - " prefixes remain
-          if grep -q '<display-name>AU' public/fxtl.xml; then
-              echo "⚠️ Warning: Some AU prefixes still remain. Applying final cleanup..."
-              # Final pass with sed to catch any remaining
-              sed -i 's/<display-name>AU - /<display-name>/g' public/fxtl.xml
-              sed -i 's/<display-name>AU /<display-name>/g' public/fxtl.xml
-              sed -i 's/<display-name>AU-/<display-name>/g' public/fxtl.xml
-          fi
-
-      - name: Generate channel list
-        run: |
-          echo "# 📺 Foxtel Channels Only" > public/channels.md
-          echo "" >> public/channels.md
-          echo "| Channel ID | Clean Display Name |" >> public/channels.md
-          echo "|------------|-------------------|" >> public/channels.md
+          # Final cleanup with sed to catch any remaining patterns
+          echo "Running final cleanup passes..."
           
-          # Extract channels and display names
-          while IFS= read -r line; do
-              if [[ $line =~ \<channel[[:space:]]+id=\"([^\"]+)\" ]]; then
-                  channel_id="${BASH_REMATCH[1]}"
-              fi
-              if [[ $line =~ \<display-name\>(.*)\</display-name\> ]]; then
-                  display_name="${BASH_REMATCH[1]}"
-                  echo "| $channel_id | $display_name |" >> public/channels.md
-              fi
-          done < <(grep -E '<channel|display-name' public/fxtl.xml)
+          # Remove "AU - " pattern
+          sed -i 's/<display-name>AU - /<display-name>/g' public/fxtl.xml
           
-          echo "" >> public/channels.md
-          echo "**Total Foxtel channels: $(grep -c '<channel' public/fxtl.xml)**" >> public/channels.md
-          echo "" >> public/channels.md
-          echo "✅ All 'AU - ' prefixes have been removed from display names." >> public/channels.md
+          # Remove "AU-" pattern
+          sed -i 's/<display-name>AU-/<display-name>/g' public/fxtl.xml
           
-          echo "Channel list generated:"
-          cat public/channels.md
-
-      - name: Validate final EPG
-        run: |
-          if [ -f public/fxtl.xml ] && [ -s public/fxtl.xml ]; then
-              CHANNEL_COUNT=$(grep -c '<channel' public/fxtl.xml || echo "0")
-              PROGRAMME_COUNT=$(grep -c '<programme' public/fxtl.xml || echo "0")
-              
-              echo "✅ EPG Statistics:"
-              echo "   - Foxtel channels: $CHANNEL_COUNT"
-              echo "   - Programmes: $PROGRAMME_COUNT"
-              echo "   - File size: $(wc -c < public/fxtl.xml) bytes"
-              
-              # Check if any AU prefixes remain
-              AU_COUNT=$(grep -c '<display-name>AU' public/fxtl.xml || echo "0")
-              if [ "$AU_COUNT" -gt 0 ]; then
-                  echo "⚠️ Warning: $AU_COUNT channels still have AU prefix"
-                  grep '<display-name>AU' public/fxtl.xml | head -5
-              else
-                  echo "✅ No AU prefixes found - all clean!"
-              fi
-              
-              # Show sample of clean channel names
-              echo ""
-              echo "Sample of clean channel names:"
-              grep '<display-name>' public/fxtl.xml | head -10 | sed 's/^[[:space:]]*//'
-          else
-              echo "❌ EPG file missing or empty"
-              exit 1
-          fi
-
-      - name: Commit and push
-        run: |
-          git config --global user.name "EPG Bot"
-          git config --global user.email "actions@github.com"
-          git add public/fxtl.xml public/channels.md
+          # Remove "AU " pattern
+          sed -i 's/<display-name>AU /<display-name>/g' public/fxtl.xml
           
-          if git diff --staged --quiet; then
-              echo "No changes to commit"
-          else
-              CHANNEL_COUNT=$(grep -c '<channel' public/fxtl.xml || echo "0")
-              git commit -m "Update Foxtel EPG: $(date +'%Y-%m-%d') - ${CHANNEL_COUNT} channels, AU prefixes removed"
-              git push
-              echo "✅ Changes committed"
-          fi
+          # Remove any standalone "- " that might remain at the beginning
+          sed -i 's/<display-name>- /<display-name>/g' public/fxtl.xml
+          sed -i 's/<display-name> - /<display-name>/g' public/fxtl.xml
+          
+          # Final trim of any double spaces
+          sed -i 's/  / /g' public/fxtl.xml
+          
+          echo "Final verification:"
+          grep '<display-name>' public/fxtl.xml | head -20
