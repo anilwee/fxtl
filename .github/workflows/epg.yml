@@ -2,17 +2,12 @@ name: Generate Foxtel EPG
 
 on:
   schedule:
-    # Runs daily at NZT 00:00
-    # NZDT = UTC+13 → 11:00 UTC
+    # NZDT (summer) midnight = 11:00 UTC
     - cron: "0 11 * * *"
+    # NZST (winter) midnight = 12:00 UTC
+    - cron: "0 12 * * *"
 
   workflow_dispatch:
-    inputs:
-      force_refresh:
-        description: "Force refresh EPG"
-        required: false
-        default: "yes"
-
 
 jobs:
   build:
@@ -22,26 +17,27 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Mono
-        run: sudo apt-get update && sudo apt-get install -y mono-complete unzip
-
-      - name: Install WebGrab+
+      - name: Install dependencies
         run: |
-          wget http://webgrabplus.com/sites/default/files/download/SW/V5.1.0/WebGrabPlus_Linux_Installer.bin
-          chmod +x WebGrabPlus_Linux_Installer.bin
-          sudo ./WebGrabPlus_Linux_Installer.bin
+          sudo apt-get update
+          sudo apt-get install -y mono-complete unzip curl
+
+      - name: Install WebGrab+Plus
+        run: |
+          wget https://github.com/SilentButeo2/webgrabplus/releases/latest/download/webgrabplus.deb
+          sudo dpkg -i webgrabplus.deb || sudo apt-get install -f -y
 
       - name: Download SiteIni Pack
         run: |
-          mkdir siteini
+          mkdir -p siteini
           wget -O siteini.zip https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/master.zip
           unzip siteini.zip -d siteini
 
-      - name: Run Grab
+      - name: Run WebGrab
         run: |
-          WebGrab+Plus --config ./webgrab/WebGrab++.config.xml
+          mono /usr/bin/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
 
-      - name: Move output
+      - name: Move output to public folder
         run: |
           mkdir -p public
           cp guide.xml public/epg.xml
@@ -51,5 +47,5 @@ jobs:
           git config --global user.name "EPG Bot"
           git config --global user.email "actions@github.com"
           git add public/epg.xml
-          git commit -m "Daily EPG update" || echo "No changes"
+          git commit -m "EPG update $(date)" || echo "No changes"
           git push
