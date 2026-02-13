@@ -13,45 +13,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create directories
-        run: mkdir -p config data public
-
-      - name: Copy WebGrab config
+      - name: Install Mono
         run: |
-          if [ -f "WebGrab++.config.xml" ]; then
-            cp WebGrab++.config.xml config/
-            echo "✅ Config file copied"
-          else
-            echo "❌ ERROR: WebGrab++.config.xml not found!"
-            exit 1
-          fi
+          sudo apt-get update
+          sudo apt-get install -y mono-complete unzip wget
 
-      - name: Run WebGrab+Plus (immediate mode)
+      - name: Download WebGrab+Plus
         run: |
-          docker run --rm \
-            --hostname webgrabplus \
-            --mac-address 02:42:ac:11:00:02 \
-            -e PUID=1000 \
-            -e PGID=1000 \
-            -e TZ=Pacific/Auckland \
-            -v $PWD/config:/config \
-            -v $PWD/data:/data \
-            --entrypoint dotnet \
-            lscr.io/linuxserver/webgrabplus:latest \
-            /app/WebGrab+Plus.dll
+          wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrabPlus_5.5_install.tar.gz
+          tar -xzf WebGrabPlus_5.5_install.tar.gz
+          cd .wg++
+          chmod +x install.sh
+          ./install.sh
+          echo "$PWD" >> $GITHUB_PATH
 
-      - name: Copy EPG to public
+      - name: Copy config
         run: |
-          if [ -f "data/guide.xml" ]; then
-            cp data/guide.xml public/epg.xml
-            echo "✅ EPG generated: $(wc -l < data/guide.xml) lines"
-            ls -lh public/epg.xml
-          else
-            echo "❌ No guide.xml generated"
-            # Show debug info
-            ls -la data/ || echo "No data directory"
-            exit 1
-          fi
+          mkdir -p config
+          cp WebGrab++.config.xml config/
+
+      - name: Run WebGrab+Plus
+        run: |
+          cd config
+          mono ../.wg++/WebGrab+Plus.exe
+
+      - name: Copy EPG
+        run: |
+          mkdir -p public
+          cp config/guide.xml public/epg.xml
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -59,4 +48,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           publish_branch: gh-pages
-          force_orphan: true
