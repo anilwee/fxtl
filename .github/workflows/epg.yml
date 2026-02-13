@@ -4,7 +4,6 @@ on:
   schedule:
     - cron: "0 11 * * *" # NZDT midnight
     - cron: "0 12 * * *" # NZST midnight
-
   workflow_dispatch:
 
 jobs:
@@ -18,21 +17,24 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mono-complete unzip wget
+          sudo apt-get install -y mono-complete git unzip
 
-      - name: Download WebGrab+Plus Portable
+      - name: Clone WebGrab Source
         run: |
-          wget http://webgrabplus.com/sites/default/files/download/SW/V3.2.1/WebGrabPlus_Linux_Portable.zip
-          unzip WebGrabPlus_Linux_Portable.zip -d webgrab-bin
+          git clone https://github.com/SilentButeo2/webgrabplus.git
+
+      - name: Build WebGrab
+        run: |
+          cd webgrabplus
+          xbuild WebGrab+Plus.sln
 
       - name: Download SiteIni Pack
         run: |
-          wget -O siteini.zip https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/master.zip
-          unzip siteini.zip -d siteini
+          git clone https://github.com/SilentButeo2/webgrabplus-siteinipack.git
 
       - name: Run WebGrab
         run: |
-          mono webgrab-bin/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
+          mono webgrabplus/bin/Release/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
 
       - name: Move output to public
         run: |
