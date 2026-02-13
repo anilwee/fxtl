@@ -18,29 +18,38 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mono-complete unzip wget
 
-      - name: Download WebGrab+Plus
+      - name: Download WebGrab+Plus binary
         run: |
-          wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrabPlus_5.5_install.tar.gz
-          tar -xzf WebGrabPlus_5.5_install.tar.gz
-          cd .wg++
-          chmod +x install.sh
-          ./install.sh
-          echo "$PWD" >> $GITHUB_PATH
+          # Download the Windows/Linux binary directly
+          wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrab+Plus_V5.5.0_generic.zip
+          unzip WebGrab+Plus_V5.5.0_generic.zip -d webgrabplus
+          chmod +x webgrabplus/WebGrab+Plus.exe
 
-      - name: Copy config
+      - name: Setup config and siteini
         run: |
-          mkdir -p config
-          cp WebGrab++.config.xml config/
+          mkdir -p webgrabplus/config
+          cp WebGrab++.config.xml webgrabplus/config/
+          
+          # Download siteini pack
+          wget https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/main.zip -O siteini.zip
+          unzip siteini.zip
+          cp -r webgrabplus-siteinipack-main/siteini.pack/* webgrabplus/siteini.pack/ 2>/dev/null || mkdir -p webgrabplus/siteini.pack
 
       - name: Run WebGrab+Plus
         run: |
-          cd config
-          mono ../.wg++/WebGrab+Plus.exe
+          cd webgrabplus
+          mono WebGrab+Plus.exe -c ./config/WebGrab++.config.xml
 
       - name: Copy EPG
         run: |
           mkdir -p public
-          cp config/guide.xml public/epg.xml
+          if [ -f "webgrabplus/guide.xml" ]; then
+            cp webgrabplus/guide.xml public/epg.xml
+            echo "✅ EPG generated: $(wc -l < webgrabplus/guide.xml) lines"
+          else
+            echo "❌ No guide.xml generated"
+            exit 1
+          fi
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -48,3 +57,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           publish_branch: gh-pages
+          force_orphan: true
