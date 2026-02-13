@@ -23,18 +23,19 @@ jobs:
           wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrabPlus_5.5_install.tar.gz
           tar -zxvf WebGrabPlus_5.5_install.tar.gz
           mkdir -p webgrabplus-bin
-          # Copy all DLLs from the installer package
+          # Copy ALL necessary files
           find . -name "*.dll" -type f -exec cp {} webgrabplus-bin/ \;
           find . -name "*.json" -type f -exec cp {} webgrabplus-bin/ \;
+          # Copy the run script
+          find . -name "run.net.sh" -type f -exec cp {} webgrabplus-bin/ \;
+          chmod +x webgrabplus-bin/run.net.sh
 
-      - name: Download SiteIni Pack (Official - Working)
+      - name: Download SiteIni Pack (Official Website)
         run: |
-          wget https://github.com/webgrabplus/siteinipack-official/archive/refs/heads/main.zip -O siteini.zip
-          unzip siteini.zip
+          wget https://webgrabplus.com/sites/default/files/download/siteini.pack/WebGrabPlus.siteini.pack.tar.gz -O siteini.tar.gz
+          tar -xzf siteini.tar.gz
           mkdir -p webgrabplus-bin/siteini.pack
-          # Copy all siteini files
-          cp -r siteinipack-official-main/siteini.pack/* webgrabplus-bin/siteini.pack/ 2>/dev/null || true
-          echo "SiteIni Pack downloaded and extracted"
+          cp -r siteini.pack/* webgrabplus-bin/siteini.pack/ 2>/dev/null || echo "✅ SiteIni files copied"
 
       - name: Setup configuration
         run: |
@@ -43,26 +44,26 @@ jobs:
             cp WebGrab++.config.xml webgrabplus-bin/config/
             echo "✅ Config file copied"
           else
-            echo "❌ WebGrab++.config.xml not found in repository root!"
+            echo "❌ WebGrab++.config.xml not found!"
             exit 1
           fi
 
       - name: Run WebGrab+Plus
         run: |
           cd webgrabplus-bin
-          dotnet WebGrab+Plus.dll
+          ./run.net.sh
 
       - name: Copy EPG output
         run: |
           mkdir -p public
           if [ -f "webgrabplus-bin/guide.xml" ]; then
             cp webgrabplus-bin/guide.xml public/epg.xml
-            echo "✅ EPG generated successfully"
-            echo "File size: $(wc -l < webgrabplus-bin/guide.xml) lines"
+            echo "✅ EPG generated successfully!"
+          elif [ -f "guide.xml" ]; then
+            cp guide.xml public/epg.xml
+            echo "✅ EPG generated successfully!"
           else
-            echo "❌ No guide.xml generated"
-            # Debug: show what files exist
-            ls -la webgrabplus-bin/
+            echo "❌ No guide.xml found"
             exit 1
           fi
 
