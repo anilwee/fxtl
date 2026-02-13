@@ -19,7 +19,7 @@ jobs:
         run: mkdir -p public
 
       - name: Install XML tools
-        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+        run: sudo apt-get update && sudo apt-get install -y xmlstarlet python3-lxml
 
       - name: Download EPG
         run: |
@@ -41,146 +41,7 @@ jobs:
           
           echo "EPG file size: $(wc -c < public/raw_epg.xml) bytes"
 
-      - name: Create definitive Foxtel channel list
-        run: |
-          # Comprehensive list of actual Foxtel channel IDs
-          cat > public/foxtel_channels.txt << 'EOF'
-          # Entertainment
-          10_BOLD
-          10_PEACH
-          10_SHAKE
-          111
-          112
-          13TH_STREET
-          7MATE
-          7TWO
-          7FLIX
-          9GEM
-          9GO
-          9LIFE
-          9RUSH
-          A&E
-          ABC
-          ABC_KIDS
-          ABC_ME
-          ANIMAL_PLANET
-          ARENA
-          BBC_EARTH
-          BBC_FIRST
-          BBC_UKTV
-          BOX_CHANNELS
-          BOX_HITS
-          BOX_PLUS
-          BRAVO
-          CARTONETWORK
-          CBEBIES
-          CBeebies
-          CINEMAX
-          CNBC
-          CNN
-          COMEDY
-          CRIME
-          DISCOVERY
-          DISCOVERY_TURBO
-          DISCOVERY_SCIENCE
-          DISNEY
-          DISNEY_JR
-          DISNEY_XD
-          DOCOS
-          E!
-          FOX8
-          FOX_ARENA
-          FOX_COMEDY
-          FOX_CRICKET
-          FOX_CRIME
-          FOX_DOCOS
-          FOX_FOOTY
-          FOX_HITS
-          FOX_LEAGUE
-          FOX_MOVIES
-          FOX_ONE
-          FOX_SHOWCASE
-          FOX_SPORTS_500
-          FOX_SPORTS_501
-          FOX_SPORTS_502
-          FOX_SPORTS_503
-          FOX_SPORTS_504
-          FOX_SPORTS_505
-          FOX_SPORTS_506
-          FOX_SPORTS_NEWS
-          FOX_THEATRE
-          FOXTEL_ARTS
-          FOXTEL_ARTS
-          FOXTEL_MOVIES
-          FOXTEL_ON_DEMAND
-          FOXTEL_ONE
-          FOXTEL_PLUS
-          FOXTEL_SPORTS
-          FOXTEL_SPORTS_1
-          FOXTEL_SPORTS_2
-          FOXTEL_SPORTS_3
-          FOXTEL_SPORTS_4
-          FOXTEL_SPORTS_5
-          FOXTEL_SPORTS_6
-          FOXTEL_SPORTS_7
-          FOXTEL_SPORTS_8
-          FOXTEL_SPORTS_9
-          FOXTEL_SPORTS_10
-          FOXTEL_SPORTS_11
-          FOXTEL_ULTRA_HD
-          GEM
-          GOLD
-          HOME
-          KAYO_SPORTS_1
-          KAYO_SPORTS_2
-          KAYO_SPORTS_3
-          KAYO_SPORTS_4
-          KAYO_SPORTS_5
-          KIDS
-          LIFESTYLE
-          LIFESTYLE_FOOD
-          LIFESTYLE_HOME
-          MAX
-          MOVIE_GREATS
-          MOVIE_ONE
-          MTV
-          MUSIC
-          NATIONAL_GEOGRAPHIC
-          NICK_JR
-          NICKELODEON
-          ONE
-          OUTDOOR_CHANNEL
-          PARAMOUNT
-          PPV
-          PREMIER_SPORTS
-          RACING_COM
-          SBS
-          SBS_VICELAND
-          SBS_WORLD_MOVIES
-          SBS_FOOD
-          SKY_NEWS
-          SKY_NEWS_EXTRA
-          SKY_RACING
-          SKY_RACING_1
-          SKY_RACING_2
-          SKY_SPORTS
-          SPORTSNET
-          STINGRAY
-          STUDIO
-          SYFY
-          TBN
-          TLC
-          TV1
-          TV_HITS
-          UKTV
-          UNIVERSAL
-          WARNER_BROS
-          W
-          WORLD_MOVIES
-          YES
-          EOF
-
-      - name: Filter ONLY Foxtel channels and remove AU prefix
+      - name: Filter ONLY Foxtel channels and remove "AU - " prefix
         run: |
           echo "🔍 Starting aggressive Foxtel-only filtering..."
           
@@ -195,95 +56,110 @@ jobs:
               tree = ET.parse('public/raw_epg.xml')
               root = tree.getroot()
               
-              # Remove namespace if present for easier processing
+              # Handle namespace if present
               namespace = ''
               if root.tag.startswith('{'):
                   namespace = root.tag.split('}')[0] + '}'
                   print(f"Found namespace: {namespace}")
               
-              # Load Foxtel channels
-              with open('public/foxtel_channels.txt', 'r') as f:
-                  foxtel_channels = [line.strip() for line in f if line.strip() and not line.startswith('#')]
-              
-              print(f"Loaded {len(foxtel_channels)} Foxtel channel patterns")
-              
-              # Function to check if channel is Foxtel
-              def is_foxtel_channel(channel_id):
-                  if not channel_id:
-                      return False
-                  
-                  # Remove AU prefix for checking
-                  clean_id = re.sub(r'^AU', '', str(channel_id)).upper()
-                  
-                  # Direct match
-                  if clean_id in foxtel_channels:
-                      return True
-                  
-                  # Partial match (for numeric IDs)
-                  for pattern in foxtel_channels:
-                      if pattern.isdigit() and clean_id.isdigit() and pattern == clean_id:
-                          return True
-                      if pattern in clean_id or clean_id in pattern:
-                          # Avoid false matches like "FOX" matching "FOX8" is good, but be careful
-                          if len(pattern) > 3 and pattern in clean_id:
-                              return True
-                  
-                  # Common Foxtel patterns
-                  foxtel_patterns = [
-                      'FOX', 'ESPN', 'SKY', 'DISCOVERY', 'LIFESTYLE', 'MOVIE',
-                      'BBC', 'NICK', 'DISNEY', 'COMEDY', 'CRIME', 'DOCOS',
-                      'ARENA', 'SPORTS', 'KAYO', 'A&E', 'TLC', 'SYFY',
-                      'PARAMOUNT', 'BRAVO', 'E!', 'MTV', 'CNBC', 'CNN',
-                      'NATIONAL GEOGRAPHIC', 'ANIMAL PLANET'
-                  ]
-                  
-                  for pattern in foxtel_patterns:
-                      if pattern in clean_id:
-                          return True
-                  
-                  # Australian FTA channels (NOT Foxtel)
-                  fta_channels = ['ABC', 'SBS', '7', '9', '10', 'NITV', 'VICELAND']
-                  for fta in fta_channels:
-                      if clean_id.startswith(fta) and not any(f in clean_id for f in ['FOX', 'ESPN']):
-                          return False
-                  
-                  # If it has a number and no obvious FTA markers, keep it
-                  if re.search(r'\d{3}', clean_id):
-                      return True
-                  
-                  return False
-              
-              # Create new root with only Foxtel channels
-              new_root = ET.Element(root.tag, root.attrib)
-              
-              # First, collect all Foxtel channel IDs
-              foxtel_ids = set()
-              
-              # Find all channel elements (handle namespace)
+              # Define channel tags with namespace
               channel_tag = f"{namespace}channel" if namespace else "channel"
               programme_tag = f"{namespace}programme" if namespace else "programme"
               display_name_tag = f"{namespace}display-name" if namespace else "display-name"
               
-              print(f"Looking for elements: {channel_tag}")
+              # Define Foxtel channel patterns (what to KEEP)
+              foxtel_patterns = [
+                  'FOX', 'ESPN', 'SKY NEWS', 'SKY RACING', 'SKY SPORTS',
+                  'DISCOVERY', 'LIFESTYLE', 'MOVIE', 'BBC', 'NICK', 
+                  'DISNEY', 'COMEDY', 'CRIME', 'DOCOS', 'ARENA',
+                  'SPORTS', 'KAYO', 'A&E', 'TLC', 'SYFY', 'PARAMOUNT',
+                  'BRAVO', 'MTV', 'CNBC', 'CNN', 'NATIONAL GEOGRAPHIC',
+                  'ANIMAL PLANET', 'UKTV', 'BOX', 'MAX', 'STUDIO',
+                  'PREMIER', 'RACING', 'OUTDOOR', 'WARNER', 'UNIVERSAL',
+                  '13TH', 'E!', 'SYFY', 'CARTON', 'CBeebies', 'BOLD',
+                  'PEACH', 'SHAKE', 'MATE', 'FLIX', 'GEM', 'GO', 'LIFE',
+                  'RUSH', '111', '112', 'HITS', 'ONE', 'SHOWCASE',
+                  'CRICKET', 'FOOTY', 'LEAGUE', 'THEATRE', 'ARTS',
+                  'ULTRA', 'HD', 'KIDS', 'JR', 'XD', 'PLUS', 'ON DEMAND'
+              ]
               
-              # Process channels
+              # Australian FTA channels to REMOVE (explicitly filter these out)
+              fta_channels = [
+                  'ABC', 'SBS', '7', '9', '10', 'NITV', 'VICELAND',
+                  '7TWO', '7MATE', '7FLIX', '9GEM', '9GO', '9LIFE',
+                  '10 BOLD', '10 PEACH', '10 SHAKE'
+              ]
+              
+              # Function to check if channel is Foxtel (NOT FTA)
+              def is_foxtel_channel(channel_id, display_text):
+                  # Convert to uppercase for comparison
+                  channel_id_upper = str(channel_id).upper() if channel_id else ''
+                  display_upper = str(display_text).upper() if display_text else ''
+                  combined = channel_id_upper + ' ' + display_upper
+                  
+                  # First check: If it contains any FTA pattern, reject it
+                  for fta in fta_channels:
+                      if fta in combined:
+                          # But make sure it's not part of a Foxtel channel
+                          # e.g., "FOX CRICKET" should not be rejected because of "CRICKET"
+                          if 'FOX' not in combined and 'ESPN' not in combined:
+                              return False
+                  
+                  # Second check: Must match at least one Foxtel pattern
+                  for pattern in foxtel_patterns:
+                      if pattern in combined:
+                          return True
+                  
+                  # Third check: Numeric channels (100-999) are likely Foxtel
+                  numbers = re.findall(r'\b\d{3}\b', combined)
+                  if numbers:
+                      return True
+                  
+                  return False
+              
+              # Create new root
+              new_root = ET.Element(root.tag, root.attrib)
+              
+              # First pass: collect all Foxtel channel IDs
+              foxtel_ids = set()
               channels_kept = 0
+              
               for channel in root.findall(channel_tag):
                   channel_id = channel.get('id', '')
                   
-                  if is_foxtel_channel(channel_id):
-                      foxtel_ids.add(channel_id)
-                      new_root.append(channel)
-                      channels_kept += 1
-                      
-                      # Remove AU prefix from display-name
-                      for display_name in channel.findall(display_name_tag):
-                          if display_name.text and display_name.text.startswith('AU'):
-                              display_name.text = display_name.text[2:]
+                  # Get display name text
+                  display_name_elem = channel.find(display_name_tag)
+                  display_text = display_name_elem.text if display_name_elem is not None else ''
                   
+                  if is_foxtel_channel(channel_id, display_text):
+                      # Clone the channel but clean the display name
+                      new_channel = ET.Element(channel_tag, channel.attrib)
+                      
+                      # Copy all subelements but clean display-name
+                      for elem in channel:
+                          new_elem = ET.SubElement(new_channel, elem.tag, elem.attrib)
+                          if elem.text:
+                              if elem.tag.endswith('display-name'):
+                                  # Clean the display name - remove "AU - " and just "AU " prefixes
+                                  cleaned_text = elem.text
+                                  # Remove patterns like "AU - ", "AU-", "AU " at the beginning
+                                  cleaned_text = re.sub(r'^AU\s*-\s*', '', cleaned_text)  # Removes "AU - "
+                                  cleaned_text = re.sub(r'^AU\s+', '', cleaned_text)      # Removes "AU " 
+                                  cleaned_text = re.sub(r'^AU-', '', cleaned_text)        # Removes "AU-"
+                                  new_elem.text = cleaned_text
+                                  print(f"Cleaned: '{elem.text}' -> '{cleaned_text}'")
+                              else:
+                                  new_elem.text = elem.text
+                          else:
+                              new_elem.text = elem.text
+                      
+                      new_root.append(new_channel)
+                      foxtel_ids.add(channel_id)
+                      channels_kept += 1
+              
               print(f"✅ Kept {channels_kept} Foxtel channels")
               
-              # Process programmes
+              # Second pass: add programmes for kept channels
               programmes_kept = 0
               for programme in root.findall(programme_tag):
                   prog_channel = programme.get('channel', '')
@@ -292,21 +168,33 @@ jobs:
                       new_root.append(programme)
                       programmes_kept += 1
               
-              print(f"✅ Kept {programmes_kept} programmes for Foxtel channels")
+              print(f"✅ Kept {programmes_kept} programmes")
               
-              # Write the new XML
-              new_tree = ET.ElementTree(new_root)
-              
-              # Properly format the XML
+              # Write the new XML with proper formatting
               from xml.dom import minidom
               rough_string = ET.tostring(new_root, 'utf-8')
               reparsed = minidom.parseString(rough_string)
-              pretty_xml = reparsed.toprettyxml(indent="  ", encoding='utf-8')
               
+              # Add XML declaration and DOCTYPE
               with open('public/fxtl.xml', 'wb') as f:
+                  f.write(b'<?xml version="1.0" encoding="utf-8"?>\n')
+                  f.write(b'<!DOCTYPE tv SYSTEM "xmltv.dtd">\n')
+                  pretty_xml = reparsed.toprettyxml(indent="  ", encoding='utf-8')
+                  # Remove the duplicate XML declaration that minidom adds
+                  pretty_xml = pretty_xml.replace(b'<?xml version="1.0" encoding="utf-8"?>\n', b'', 1)
                   f.write(pretty_xml)
               
               print("✅ Filtered EPG written to public/fxtl.xml")
+              
+              # Verification
+              print("\n=== SAMPLE CLEANED CHANNELS ===")
+              with open('public/fxtl.xml', 'r') as f:
+                  lines = f.readlines()
+                  sample_count = 0
+                  for line in lines:
+                      if '<display-name>' in line and sample_count < 10:
+                          print(line.strip())
+                          sample_count += 1
               
           except Exception as e:
               print(f"Error processing XML: {e}")
@@ -318,34 +206,37 @@ jobs:
           # Run the Python script
           python3 public/filter_epg.py
           
-          # Verify the result
-          if [ -f public/fxtl.xml ]; then
-              echo "✅ Final EPG created with $(grep -c '<channel' public/fxtl.xml || echo "0") channels"
-              echo "Sample channels:"
-              grep -m 5 '<display-name' public/fxtl.xml || echo "No display names found"
-          else
-              echo "❌ Failed to create filtered EPG"
-              cp public/raw_epg.xml public/fxtl.xml
+          # Verify no "AU - " prefixes remain
+          if grep -q '<display-name>AU' public/fxtl.xml; then
+              echo "⚠️ Warning: Some AU prefixes still remain. Applying final cleanup..."
+              # Final pass with sed to catch any remaining
+              sed -i 's/<display-name>AU - /<display-name>/g' public/fxtl.xml
+              sed -i 's/<display-name>AU /<display-name>/g' public/fxtl.xml
+              sed -i 's/<display-name>AU-/<display-name>/g' public/fxtl.xml
           fi
 
       - name: Generate channel list
         run: |
           echo "# 📺 Foxtel Channels Only" > public/channels.md
           echo "" >> public/channels.md
-          echo "| Channel ID | Display Name |" >> public/channels.md
-          echo "|------------|--------------|" >> public/channels.md
+          echo "| Channel ID | Clean Display Name |" >> public/channels.md
+          echo "|------------|-------------------|" >> public/channels.md
           
-          # Extract channels using grep (more reliable than xmlstarlet sometimes)
-          grep -o '<channel[^>]*>.*?</channel>' public/fxtl.xml | while read -r line; do
-              channel_id=$(echo "$line" | grep -o 'id="[^"]*"' | cut -d'"' -f2)
-              display_name=$(echo "$line" | grep -o '<display-name>[^<]*' | sed 's/<display-name>//' | head -1)
-              if [ -n "$channel_id" ]; then
+          # Extract channels and display names
+          while IFS= read -r line; do
+              if [[ $line =~ \<channel[[:space:]]+id=\"([^\"]+)\" ]]; then
+                  channel_id="${BASH_REMATCH[1]}"
+              fi
+              if [[ $line =~ \<display-name\>(.*)\</display-name\> ]]; then
+                  display_name="${BASH_REMATCH[1]}"
                   echo "| $channel_id | $display_name |" >> public/channels.md
               fi
-          done
+          done < <(grep -E '<channel|display-name' public/fxtl.xml)
           
           echo "" >> public/channels.md
           echo "**Total Foxtel channels: $(grep -c '<channel' public/fxtl.xml)**" >> public/channels.md
+          echo "" >> public/channels.md
+          echo "✅ All 'AU - ' prefixes have been removed from display names." >> public/channels.md
           
           echo "Channel list generated:"
           cat public/channels.md
@@ -361,12 +252,19 @@ jobs:
               echo "   - Programmes: $PROGRAMME_COUNT"
               echo "   - File size: $(wc -c < public/fxtl.xml) bytes"
               
-              # Check if AU prefix is gone
-              if grep -q '<display-name>AU' public/fxtl.xml; then
-                  echo "⚠️ Warning: Some AU prefixes remain"
+              # Check if any AU prefixes remain
+              AU_COUNT=$(grep -c '<display-name>AU' public/fxtl.xml || echo "0")
+              if [ "$AU_COUNT" -gt 0 ]; then
+                  echo "⚠️ Warning: $AU_COUNT channels still have AU prefix"
+                  grep '<display-name>AU' public/fxtl.xml | head -5
               else
-                  echo "✅ No AU prefixes found in display names"
+                  echo "✅ No AU prefixes found - all clean!"
               fi
+              
+              # Show sample of clean channel names
+              echo ""
+              echo "Sample of clean channel names:"
+              grep '<display-name>' public/fxtl.xml | head -10 | sed 's/^[[:space:]]*//'
           else
               echo "❌ EPG file missing or empty"
               exit 1
@@ -382,7 +280,7 @@ jobs:
               echo "No changes to commit"
           else
               CHANNEL_COUNT=$(grep -c '<channel' public/fxtl.xml || echo "0")
-              git commit -m "Update Foxtel EPG: $(date +'%Y-%m-%d') - ${CHANNEL_COUNT} Foxtel channels, AU prefix removed"
+              git commit -m "Update Foxtel EPG: $(date +'%Y-%m-%d') - ${CHANNEL_COUNT} channels, AU prefixes removed"
               git push
               echo "✅ Changes committed"
           fi
