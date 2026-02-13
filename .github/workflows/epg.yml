@@ -1,76 +1,33 @@
-name: Foxtel EPG Generator
+name: Fetch Foxtel EPG
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 */6 * * *"  # Every 6 hours
 
 jobs:
-  generate-epg:
+  fetch-epg:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Download WebGrab+Plus
-        run: |
-          wget https://webgrabplus.com/sites/default/files/download/SW/V5.5.0/WebGrabPlus_5.5_install.tar.gz
-          tar -zxvf WebGrabPlus_5.5_install.tar.gz
-          mkdir -p webgrabplus-bin
-          # Copy ALL necessary files
-          find . -name "*.dll" -type f -exec cp {} webgrabplus-bin/ \;
-          find . -name "*.json" -type f -exec cp {} webgrabplus-bin/ \;
-          # Copy the run script
-          find . -name "run.net.sh" -type f -exec cp {} webgrabplus-bin/ \;
-          chmod +x webgrabplus-bin/run.net.sh
-
-      - name: Download SiteIni Pack (Official Website)
-        run: |
-          wget https://webgrabplus.com/sites/default/files/download/siteini.pack/WebGrabPlus.siteini.pack.tar.gz -O siteini.tar.gz
-          tar -xzf siteini.tar.gz
-          mkdir -p webgrabplus-bin/siteini.pack
-          cp -r siteini.pack/* webgrabplus-bin/siteini.pack/ 2>/dev/null || echo "✅ SiteIni files copied"
-
-      - name: Setup configuration
-        run: |
-          mkdir -p webgrabplus-bin/config
-          if [ -f "WebGrab++.config.xml" ]; then
-            cp WebGrab++.config.xml webgrabplus-bin/config/
-            echo "✅ Config file copied"
-          else
-            echo "❌ WebGrab++.config.xml not found!"
-            exit 1
-          fi
-
-      - name: Run WebGrab+Plus
-        run: |
-          cd webgrabplus-bin
-          ./run.net.sh
-
-      - name: Copy EPG output
+        
+      - name: Download EPG
         run: |
           mkdir -p public
-          if [ -f "webgrabplus-bin/guide.xml" ]; then
-            cp webgrabplus-bin/guide.xml public/epg.xml
-            echo "✅ EPG generated successfully!"
-          elif [ -f "guide.xml" ]; then
-            cp guide.xml public/epg.xml
-            echo "✅ EPG generated successfully!"
-          else
-            echo "❌ No guide.xml found"
-            exit 1
-          fi
-
-      - name: Deploy to GitHub Pages
+          # Multiple EPG sources for Australian TV
+          wget https://epgshare01.online/share01/epg_ripper_au.xml.gz -O au1.xml.gz || true
+          wget https://i.mjh.nz/au/foxtel-epg.xml -O foxtel.xml || true
+          
+          # Use MJH's excellent Australian EPG (recommended)
+          wget https://i.mjh.nz/au/foxtel.xml -O public/epg.xml
+          
+          echo "✅ EPG downloaded from i.mjh.nz"
+          
+      - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           publish_branch: gh-pages
-          force_orphan: true
