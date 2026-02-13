@@ -2,10 +2,8 @@ name: Generate Foxtel EPG
 
 on:
   schedule:
-    # NZDT (summer) midnight = 11:00 UTC
-    - cron: "0 11 * * *"
-    # NZST (winter) midnight = 12:00 UTC
-    - cron: "0 12 * * *"
+    - cron: "0 11 * * *" # NZDT midnight
+    - cron: "0 12 * * *" # NZST midnight
 
   workflow_dispatch:
 
@@ -20,24 +18,23 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mono-complete unzip curl
+          sudo apt-get install -y mono-complete unzip wget
 
-      - name: Install WebGrab+Plus
+      - name: Download WebGrab+Plus Portable
         run: |
-          wget https://github.com/SilentButeo2/webgrabplus/releases/latest/download/webgrabplus.deb
-          sudo dpkg -i webgrabplus.deb || sudo apt-get install -f -y
+          wget http://webgrabplus.com/sites/default/files/download/SW/V3.2.1/WebGrabPlus_Linux_Portable.zip
+          unzip WebGrabPlus_Linux_Portable.zip -d webgrab-bin
 
       - name: Download SiteIni Pack
         run: |
-          mkdir -p siteini
           wget -O siteini.zip https://github.com/SilentButeo2/webgrabplus-siteinipack/archive/refs/heads/master.zip
           unzip siteini.zip -d siteini
 
       - name: Run WebGrab
         run: |
-          mono /usr/bin/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
+          mono webgrab-bin/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
 
-      - name: Move output to public folder
+      - name: Move output to public
         run: |
           mkdir -p public
           cp guide.xml public/epg.xml
