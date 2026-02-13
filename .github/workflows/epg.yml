@@ -17,24 +17,26 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mono-complete git unzip
+          sudo apt-get install -y mono-complete unzip wget
 
-      - name: Clone WebGrab Source
+      - name: Download WebGrab Source
         run: |
-          git clone https://github.com/ldab/webgrabplus.git
+          wget https://codeload.github.com/ldab/webgrabplus/zip/refs/heads/master -O webgrab.zip
+          unzip webgrab.zip
 
       - name: Build WebGrab
         run: |
-          cd webgrabplus
+          cd webgrabplus-master
           xbuild WebGrabPlus.sln
 
       - name: Download SiteIni Pack
         run: |
-          git clone https://github.com/SilentButeo2/webgrabplus-siteinipack.git
+          wget https://codeload.github.com/SilentButeo2/webgrabplus-siteinipack/zip/refs/heads/master -O siteini.zip
+          unzip siteini.zip
 
       - name: Run WebGrab
         run: |
-          mono webgrabplus/bin/Release/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
+          mono webgrabplus-master/bin/Release/WebGrab+Plus.exe --config ./webgrab/WebGrab++.config.xml
 
       - name: Move output to public
         run: |
