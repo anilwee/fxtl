@@ -1,0 +1,27 @@
+name: Sync XML File
+on:
+  schedule:
+    # Runs at 02:00 AM Auckland time (UTC+13)
+    # Converted to UTC: 13:00 UTC (during NZ daylight time)
+    - cron: '13 13 * * *'
+  workflow_dispatch: # Allows manual run
+
+jobs:
+  download-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download sky.xml
+        run: |
+          curl -o public/sky.xml \
+            https://raw.githubusercontent.com/knowledgejunkie/xmltv-lineups-uk/master/sky.xml
+      
+      - name: Commit and push if changed
+        run: |
+          git config user.name "Automated Sync"
+          git config user.email "actions@github.com"
+          git add public/sky.xml
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update sky.xml"
+          git push
