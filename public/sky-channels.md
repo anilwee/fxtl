@@ -1,27 +1,27 @@
-# 📺 Sky UK Channel Lineup
+# 📺 Sky UK EPG - Channel List
 
-*This file is automatically updated from [knowledgejunkie/xmltv-lineups-uk](https://github.com/knowledgejunkie/xmltv-lineups-uk)*
+*This EPG is automatically updated from epgshare01.online*
 
 ## Last Updated
-- **Date:** 2026-04-07 05:46 UTC
-- **Source:** https://raw.githubusercontent.com/knowledgejunkie/xmltv-lineups-uk/master/sky.xml
+- **Date:** 2026-04-07 06:45 UTC
+- **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
 
-## Channel Summary
+## EPG Statistics
 
 | Metric | Value |
 |--------|-------|
-| Total Lineup Entries | 584 |
-| Unique Channel Stations | 584 |
+| Total Channels | 920 |
+| Total Programmes | 79599 |
+| SD/HD Channels Created | 443 |
+| Programmes Copied | 38383 |
 
-## Sample Channels
+## Channel List (SD/HD Pairs)
 
-| Preset | Channel Name | Package |
-|--------|-------------|---------|
+| Channel ID | Display Name | Type |
+|------------|--------------|------|
 
----
 ## Raw File Access
 
-The raw XML file is available at:
 ```
 https://raw.githubusercontent.com/anilwee/fxtl/main/public/sky.xml
 ```
