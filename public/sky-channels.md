@@ -3,7 +3,7 @@
 *This EPG is automatically updated from epgshare01.online*
 
 ## Last Updated
-- **Date:** 2026-04-07 06:45 UTC
+- **Date:** 2026-04-07 15:00 UTC
 - **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
 
 ## EPG Statistics
