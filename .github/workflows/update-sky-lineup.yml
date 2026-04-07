@@ -1,4 +1,4 @@
-name: Update Sky UK Channel Lineup
+name: Update Sky UK EPG from epgshare01
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  update-sky-lineup:
+  update-sky-epg:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -16,117 +16,153 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download and update sky.xml from knowledgejunkie
+      - name: Create public directory
+        run: mkdir -p public
+
+      - name: Download compressed EPG from epgshare01
         run: |
-          echo "📡 Downloading Sky UK channel lineup from knowledgejunkie repository..."
+          echo "📡 Downloading UK EPG from epgshare01..."
           
-          # Download the original sky.xml from the source
-          wget -qO public/sky.xml https://raw.githubusercontent.com/knowledgejunkie/xmltv-lineups-uk/master/sky.xml
+          # Try with curl first (more flexible than wget)
+          curl -L -o public/epg_ripper_UK1.xml.gz https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz || \
+          wget -qO public/epg_ripper_UK1.xml.gz https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
           
-          # Verify download was successful
-          if [ -f public/sky.xml ] && [ -s public/sky.xml ]; then
-            echo "✅ Sky lineup downloaded successfully to public/sky.xml"
-            echo "📊 File size: $(wc -c < public/sky.xml) bytes"
-            
-            # Display first few lines as a sanity check
-            echo "📺 First 5 lines of the file:"
-            head -5 public/sky.xml
+          # Check if download succeeded
+          if [ -f public/epg_ripper_UK1.xml.gz ] && [ -s public/epg_ripper_UK1.xml.gz ]; then
+            echo "✅ Download successful"
+            echo "📦 Compressed size: $(wc -c < public/epg_ripper_UK1.xml.gz) bytes"
           else
-            echo "❌ Failed to download sky.xml"
+            echo "❌ Failed to download from primary source"
             exit 1
           fi
 
-      - name: Validate XML structure
+      - name: Decompress XML.gz to sky.xml
+        run: |
+          echo "🔓 Decompressing XML.gz file..."
+          
+          # Decompress the gzip file to sky.xml
+          gunzip -c public/epg_ripper_UK1.xml.gz > public/sky.xml
+          
+          # Verify decompression
+          if [ -f public/sky.xml ] && [ -s public/sky.xml ]; then
+            echo "✅ Decompression successful"
+            echo "📄 Uncompressed size: $(wc -c < public/sky.xml) bytes"
+            
+            # Show first few lines to verify it's valid XML
+            echo "📺 First 3 lines of XML:"
+            head -3 public/sky.xml
+          else
+            echo "❌ Decompression failed"
+            exit 1
+          fi
+          
+          # Remove the compressed file to save space
+          rm -f public/epg_ripper_UK1.xml.gz
+          echo "🗑️ Removed compressed file"
+
+      - name: Validate XML and extract statistics
         run: |
           echo "🔍 Validating XML structure..."
           
           # Check if it's valid XML by looking for root element
-          if grep -q "<xmltv-lineups" public/sky.xml; then
-            echo "✅ Valid XML structure detected (xmltv-lineups root found)"
+          if grep -q "<?xml" public/sky.xml; then
+            echo "✅ XML declaration found"
           else
-            echo "⚠️ Warning: Could not find expected root element"
+            echo "⚠️ Warning: No XML declaration found"
           fi
           
-          # Count lineup entries
-          LINEUP_COUNT=$(grep -c "<lineup-entry" public/sky.xml || echo "0")
-          CHANNEL_COUNT=$(grep -c "<station" public/sky.xml || echo "0")
+          # Count channels and programmes
+          CHANNEL_COUNT=$(grep -c "<channel" public/sky.xml || echo "0")
+          PROGRAMME_COUNT=$(grep -c "<programme" public/sky.xml || echo "0")
           
-          echo "📊 Statistics:"
-          echo "   - Lineup entries: $LINEUP_COUNT"
-          echo "   - Channel stations: $CHANNEL_COUNT"
+          echo "📊 EPG Statistics:"
+          echo "   - Total channels: $CHANNEL_COUNT"
+          echo "   - Total programmes: $PROGRAMME_COUNT"
+          
+          # Save stats for later use
+          echo "CHANNEL_COUNT=$CHANNEL_COUNT" >> $GITHUB_ENV
+          echo "PROGRAMME_COUNT=$PROGRAMME_COUNT" >> $GITHUB_ENV
 
-      - name: Update channels.md summary
+      - name: Create EPG summary (sky-epg-info.md)
         run: |
-          echo "# 📺 Sky UK Channel Lineup" > public/sky-channels.md
-          echo "" >> public/sky-channels.md
-          echo "*This file is automatically updated from [knowledgejunkie/xmltv-lineups-uk](https://github.com/knowledgejunkie/xmltv-lineups-uk)*" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
-          echo "## Last Updated" >> public/sky-channels.md
-          echo "- **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> public/sky-channels.md
-          echo "- **Source:** https://raw.githubusercontent.com/knowledgejunkie/xmltv-lineups-uk/master/sky.xml" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
+          cat > public/sky-epg-info.md << 'EOF'
+          # 📺 Sky UK EPG Guide
           
-          echo "## Channel Summary" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
+          *This EPG (Electronic Program Guide) is automatically updated from epgshare01.online*
           
-          # Extract basic channel information
-          LINEUP_COUNT=$(grep -c "<lineup-entry" public/sky.xml || echo "0")
-          CHANNEL_COUNT=$(grep -c "<station" public/sky.xml || echo "0")
+          ## Last Updated
+          EOF
           
-          echo "| Metric | Value |" >> public/sky-channels.md
-          echo "|--------|-------|" >> public/sky-channels.md
-          echo "| Total Lineup Entries | $LINEUP_COUNT |" >> public/sky-channels.md
-          echo "| Unique Channel Stations | $CHANNEL_COUNT |" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
+          echo "- **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> public/sky-epg-info.md
+          echo "- **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
           
-          echo "## Sample Channels" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
-          echo "| Preset | Channel Name | Package |" >> public/sky-channels.md
-          echo "|--------|-------------|---------|" >> public/sky-channels.md
+          echo "## EPG Statistics" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "| Metric | Value |" >> public/sky-epg-info.md
+          echo "|--------|-------|" >> public/sky-epg-info.md
+          echo "| Total Channels | ${{ env.CHANNEL_COUNT }} |" >> public/sky-epg-info.md
+          echo "| Total Programmes | ${{ env.PROGRAMME_COUNT }} |" >> public/sky-epg-info.md
+          echo "| File Size | $(du -h public/sky.xml | cut -f1) |" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
           
-          # Extract preset and channel name samples
-          grep -A2 "<lineup-entry" public/sky.xml | grep -E "(preset|name)" | head -20 | \
-          while IFS= read -r line; do
-            if echo "$line" | grep -q "<preset>"; then
-              preset=$(echo "$line" | sed 's/.*<preset>\(.*\)<\/preset>.*/\1/')
-            fi
-            if echo "$line" | grep -q "<name"; then
-              name=$(echo "$line" | sed 's/.*<name[^>]*>\([^<]*\)<\/name>.*/\1/')
-              echo "| $preset | $name | Free-to-air |" >> public/sky-channels.md
-            fi
-          done
+          echo "## Raw File Access" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "The EPG XML file is available at:" >> public/sky-epg-info.md
+          echo '```' >> public/sky-epg-info.md
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml" >> public/sky-epg-info.md
+          echo '```' >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "---" >> public/sky-epg-info.md
+          echo "*Note: This file contains programme schedule data for UK channels (Sky, BBC, ITV, etc.)*" >> public/sky-epg-info.md
+
+      - name: Verify sky.xml is valid text (not binary)
+        run: |
+          echo "🔍 Checking if sky.xml is a valid text file..."
           
-          echo "" >> public/sky-channels.md
-          echo "---" >> public/sky-channels.md
-          echo "## Raw File Access" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
-          echo "The raw XML file is available at:" >> public/sky-channels.md
-          echo '```' >> public/sky-channels.md
-          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml" >> public/sky-channels.md
-          echo '```' >> public/sky-channels.md
+          # Check for null bytes (binary indicator)
+          if grep -qP '\x00' public/sky.xml; then
+            echo "❌ ERROR: sky.xml contains binary data and will NOT work with raw.githubusercontent.com"
+            echo "   The file appears to be binary, not plain text."
+            exit 1
+          else
+            echo "✅ sky.xml is a valid text file - raw URL will work!"
+          fi
+          
+          # Check first 100 bytes are printable
+          echo "📝 First 100 characters:"
+          head -c 100 public/sky.xml
+          echo ""
 
       - name: Commit and push updated files
         run: |
-          git config --global user.name "Sky Lineup Bot"
+          git config --global user.name "EPG Update Bot"
           git config --global user.email "actions@github.com"
           
-          # Add both the updated XML and the markdown file
-          git add public/sky.xml public/sky-channels.md
+          # Add the decompressed XML and the info file
+          git add public/sky.xml public/sky-epg-info.md
           
           # Check if there are changes to commit
           if git diff --staged --quiet; then
-            echo "No changes to commit (file already up to date)"
+            echo "No changes to commit (EPG already up to date)"
           else
-            LINEUP_COUNT=$(grep -c "<lineup-entry" public/sky.xml || echo "0")
-            git commit -m "Update sky.xml: $(date +'%Y-%m-%d') - ${LINEUP_COUNT} lineup entries"
+            git commit -m "Update sky.xml EPG: $(date +'%Y-%m-%d') - ${{ env.CHANNEL_COUNT }} channels, ${{ env.PROGRAMME_COUNT }} programmes"
             git push
             echo "✅ Changes committed and pushed"
             
             # Output the URLs for convenience
             echo ""
-            echo "📺 Sky lineup updated successfully!"
-            echo "   📄 XML file: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
-            echo "   📊 Channel list: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky-channels.md"
-            echo ""
+            echo "📺 EPG updated successfully!"
+            echo "   📄 Raw XML: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
+            echo "   📊 Info page: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky-epg-info.md"
             echo "   🔗 GitHub view: https://github.com/${{ github.repository }}/blob/main/public/sky.xml"
           fi
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          echo "⚠️ Workflow failed. Check the error messages above."
+          echo "Possible issues:"
+          echo "   - The source URL might be down or blocked"
+          echo "   - The downloaded file might be corrupted"
+          echo "   - The XML might be invalid"
