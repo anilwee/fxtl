@@ -16,10 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create public directory
-        run: mkdir -p public
-
-      - name: Download Sky UK lineup from knowledgejunkie
+      - name: Download and update sky.xml from knowledgejunkie
         run: |
           echo "📡 Downloading Sky UK channel lineup from knowledgejunkie repository..."
           
@@ -28,7 +25,7 @@ jobs:
           
           # Verify download was successful
           if [ -f public/sky.xml ] && [ -s public/sky.xml ]; then
-            echo "✅ Sky lineup downloaded successfully"
+            echo "✅ Sky lineup downloaded successfully to public/sky.xml"
             echo "📊 File size: $(wc -c < public/sky.xml) bytes"
             
             # Display first few lines as a sanity check
@@ -58,7 +55,7 @@ jobs:
           echo "   - Lineup entries: $LINEUP_COUNT"
           echo "   - Channel stations: $CHANNEL_COUNT"
 
-      - name: Generate channel summary (channels.md)
+      - name: Update channels.md summary
         run: |
           echo "# 📺 Sky UK Channel Lineup" > public/sky-channels.md
           echo "" >> public/sky-channels.md
@@ -101,14 +98,19 @@ jobs:
           
           echo "" >> public/sky-channels.md
           echo "---" >> public/sky-channels.md
-          echo "*Note: This is the raw channel lineup data. For EPG guide data, you would need to combine this with an actual TV schedule source.*" >> public/sky-channels.md
+          echo "## Raw File Access" >> public/sky-channels.md
+          echo "" >> public/sky-channels.md
+          echo "The raw XML file is available at:" >> public/sky-channels.md
+          echo '```' >> public/sky-channels.md
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml" >> public/sky-channels.md
+          echo '```' >> public/sky-channels.md
 
-      - name: Commit and push changes
+      - name: Commit and push updated files
         run: |
           git config --global user.name "Sky Lineup Bot"
           git config --global user.email "actions@github.com"
           
-          # Add both the XML and the markdown file
+          # Add both the updated XML and the markdown file
           git add public/sky.xml public/sky-channels.md
           
           # Check if there are changes to commit
@@ -116,13 +118,15 @@ jobs:
             echo "No changes to commit (file already up to date)"
           else
             LINEUP_COUNT=$(grep -c "<lineup-entry" public/sky.xml || echo "0")
-            git commit -m "Update Sky UK lineup: $(date +'%Y-%m-%d') - ${LINEUP_COUNT} entries"
+            git commit -m "Update sky.xml: $(date +'%Y-%m-%d') - ${LINEUP_COUNT} lineup entries"
             git push
             echo "✅ Changes committed and pushed"
             
             # Output the URLs for convenience
             echo ""
             echo "📺 Sky lineup updated successfully!"
-            echo "   Raw XML: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
-            echo "   Channel list: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky-channels.md"
+            echo "   📄 XML file: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
+            echo "   📊 Channel list: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky-channels.md"
+            echo ""
+            echo "   🔗 GitHub view: https://github.com/${{ github.repository }}/blob/main/public/sky.xml"
           fi
