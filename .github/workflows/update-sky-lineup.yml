@@ -1,0 +1,128 @@
+name: Update Sky UK Channel Lineup
+
+on:
+  schedule:
+    # Run twice daily at 2:00 AM and 2:00 PM UTC
+    - cron: "0 2,14 * * *"
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-sky-lineup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create public directory
+        run: mkdir -p public
+
+      - name: Download Sky UK lineup from knowledgejunkie
+        run: |
+          echo "📡 Downloading Sky UK channel lineup from knowledgejunkie repository..."
+          
+          # Download the original sky.xml from the source
+          wget -qO public/sky.xml https://raw.githubusercontent.com/knowledgejunkie/xmltv-lineups-uk/master/sky.xml
+          
+          # Verify download was successful
+          if [ -f public/sky.xml ] && [ -s public/sky.xml ]; then
+            echo "✅ Sky lineup downloaded successfully"
+            echo "📊 File size: $(wc -c < public/sky.xml) bytes"
+            
+            # Display first few lines as a sanity check
+            echo "📺 First 5 lines of the file:"
+            head -5 public/sky.xml
+          else
+            echo "❌ Failed to download sky.xml"
+            exit 1
+          fi
+
+      - name: Validate XML structure
+        run: |
+          echo "🔍 Validating XML structure..."
+          
+          # Check if it's valid XML by looking for root element
+          if grep -q "<xmltv-lineups" public/sky.xml; then
+            echo "✅ Valid XML structure detected (xmltv-lineups root found)"
+          else
+            echo "⚠️ Warning: Could not find expected root element"
+          fi
+          
+          # Count lineup entries
+          LINEUP_COUNT=$(grep -c "<lineup-entry" public/sky.xml || echo "0")
+          CHANNEL_COUNT=$(grep -c "<station" public/sky.xml || echo "0")
+          
+          echo "📊 Statistics:"
+          echo "   - Lineup entries: $LINEUP_COUNT"
+          echo "   - Channel stations: $CHANNEL_COUNT"
+
+      - name: Generate channel summary (channels.md)
+        run: |
+          echo "# 📺 Sky UK Channel Lineup" > public/sky-channels.md
+          echo "" >> public/sky-channels.md
+          echo "*This file is automatically updated from [knowledgejunkie/xmltv-lineups-uk](https://github.com/knowledgejunkie/xmltv-lineups-uk)*" >> public/sky-channels.md
+          echo "" >> public/sky-channels.md
+          echo "## Last Updated" >> public/sky-channels.md
+          echo "- **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> public/sky-channels.md
+          echo "- **Source:** https://raw.githubusercontent.com/knowledgejunkie/xmltv-lineups-uk/master/sky.xml" >> public/sky-channels.md
+          echo "" >> public/sky-channels.md
+          
+          echo "## Channel Summary" >> public/sky-channels.md
+          echo "" >> public/sky-channels.md
+          
+          # Extract basic channel information
+          LINEUP_COUNT=$(grep -c "<lineup-entry" public/sky.xml || echo "0")
+          CHANNEL_COUNT=$(grep -c "<station" public/sky.xml || echo "0")
+          
+          echo "| Metric | Value |" >> public/sky-channels.md
+          echo "|--------|-------|" >> public/sky-channels.md
+          echo "| Total Lineup Entries | $LINEUP_COUNT |" >> public/sky-channels.md
+          echo "| Unique Channel Stations | $CHANNEL_COUNT |" >> public/sky-channels.md
+          echo "" >> public/sky-channels.md
+          
+          echo "## Sample Channels" >> public/sky-channels.md
+          echo "" >> public/sky-channels.md
+          echo "| Preset | Channel Name | Package |" >> public/sky-channels.md
+          echo "|--------|-------------|---------|" >> public/sky-channels.md
+          
+          # Extract preset and channel name samples
+          grep -A2 "<lineup-entry" public/sky.xml | grep -E "(preset|name)" | head -20 | \
+          while IFS= read -r line; do
+            if echo "$line" | grep -q "<preset>"; then
+              preset=$(echo "$line" | sed 's/.*<preset>\(.*\)<\/preset>.*/\1/')
+            fi
+            if echo "$line" | grep -q "<name"; then
+              name=$(echo "$line" | sed 's/.*<name[^>]*>\([^<]*\)<\/name>.*/\1/')
+              echo "| $preset | $name | Free-to-air |" >> public/sky-channels.md
+            fi
+          done
+          
+          echo "" >> public/sky-channels.md
+          echo "---" >> public/sky-channels.md
+          echo "*Note: This is the raw channel lineup data. For EPG guide data, you would need to combine this with an actual TV schedule source.*" >> public/sky-channels.md
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "Sky Lineup Bot"
+          git config --global user.email "actions@github.com"
+          
+          # Add both the XML and the markdown file
+          git add public/sky.xml public/sky-channels.md
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit (file already up to date)"
+          else
+            LINEUP_COUNT=$(grep -c "<lineup-entry" public/sky.xml || echo "0")
+            git commit -m "Update Sky UK lineup: $(date +'%Y-%m-%d') - ${LINEUP_COUNT} entries"
+            git push
+            echo "✅ Changes committed and pushed"
+            
+            # Output the URLs for convenience
+            echo ""
+            echo "📺 Sky lineup updated successfully!"
+            echo "   Raw XML: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
+            echo "   Channel list: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky-channels.md"
+          fi
