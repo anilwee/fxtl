@@ -3,7 +3,7 @@
 *This EPG is automatically updated from epgshare01.online*
 
 ## Last Updated
-- **Date:** 2026-04-08 15:01 UTC
+- **Date:** 2026-04-09 04:24 UTC
 - **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
 
 ## EPG Statistics
@@ -11,9 +11,9 @@
 | Metric | Value |
 |--------|-------|
 | Total Channels | 920 |
-| Total Programmes | 79948 |
+| Total Programmes | 79490 |
 | SD/HD Channels Created | 443 |
-| Programmes Copied | 38563 |
+| Programmes Copied | 38386 |
 
 ## Channel List (SD/HD Pairs)
 
