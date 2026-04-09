@@ -23,9 +23,11 @@ jobs:
         run: |
           echo "📡 Downloading UK EPG from epgshare01..."
           
+          # Try with curl first (more flexible than wget)
           curl -L -o public/epg_ripper_UK1.xml.gz https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz || \
           wget -qO public/epg_ripper_UK1.xml.gz https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
           
+          # Check if download succeeded
           if [ -f public/epg_ripper_UK1.xml.gz ] && [ -s public/epg_ripper_UK1.xml.gz ]; then
             echo "✅ Download successful"
             echo "📦 Compressed size: $(wc -c < public/epg_ripper_UK1.xml.gz) bytes"
@@ -37,8 +39,11 @@ jobs:
       - name: Decompress XML.gz to raw_epg.xml
         run: |
           echo "🔓 Decompressing XML.gz file..."
+          
+          # Decompress the gzip file to raw_epg.xml
           gunzip -c public/epg_ripper_UK1.xml.gz > public/raw_epg.xml
           
+          # Verify decompression
           if [ -f public/raw_epg.xml ] && [ -s public/raw_epg.xml ]; then
             echo "✅ Decompression successful"
             echo "📄 Uncompressed size: $(wc -c < public/raw_epg.xml) bytes"
@@ -47,36 +52,38 @@ jobs:
             exit 1
           fi
           
+          # Remove the compressed file to save space
           rm -f public/epg_ripper_UK1.xml.gz
+          echo "🗑️ Removed compressed file"
 
-      - name: Process EPG - Create missing SD/HD pairs (only if one is missing)
+      - name: Clean channel names (SkySp → Sky Sports, etc.)
         run: |
-          echo "🔧 Processing EPG (creating missing SD/HD pairs)..."
+          echo "🔧 Cleaning channel names..."
           
-          cat > public/process_epg.py << 'PYTHON_SCRIPT'
+          # Create Python script for channel name cleaning
+          cat > public/clean_channels.py << 'PYTHON_SCRIPT'
           import xml.etree.ElementTree as ET
           import re
           import sys
-          from copy import deepcopy
 
           try:
               # Parse the XML file
               tree = ET.parse('public/raw_epg.xml')
               root = tree.getroot()
               
-              # Handle namespace
+              # Handle namespace if present
               namespace = ''
               if root.tag.startswith('{'):
                   namespace = root.tag.split('}')[0] + '}'
                   print(f"Found namespace: {namespace}")
               
-              # Define tags
+              # Define channel tag with namespace
               channel_tag = f"{namespace}channel" if namespace else "channel"
-              programme_tag = f"{namespace}programme" if namespace else "programme"
               display_name_tag = f"{namespace}display-name" if namespace else "display-name"
               
-              # Channel name replacements (clean Sky Sports etc.)
+              # Define channel name replacements
               replacements = {
+                  # Sky Sports replacements
                   'SkySp ': 'Sky Sports ',
                   'SkySp Main Event': 'Sky Sports Main Event',
                   'SkySp Premier League': 'Sky Sports Premier League',
@@ -90,6 +97,8 @@ jobs:
                   'SkySp Mix': 'Sky Sports Mix',
                   'SkySp NFL': 'Sky Sports NFL',
                   'SkySp Racing': 'Sky Sports Racing',
+                  
+                  # Other common abbreviations
                   'SkyCine': 'Sky Cinema',
                   'SkyShow': 'Sky Showcase',
                   'SkyWit': 'Sky Witness',
@@ -97,163 +106,44 @@ jobs:
                   'SkyOne': 'Sky One',
                   'SkyTwo': 'Sky Two',
                   'SkyLiv': 'Sky Living',
+                  
+                  # General fixes
+                  ' HD': ' HD',
+                  'SD': ' SD',
+                  '+1': '+1',
               }
               
-              # First pass: Clean channel names and build channel info
-              channels = {}  # channel_id -> {'element', 'name', 'is_hd', 'base_name'}
+              channels_cleaned = 0
               
-              print("\n📺 Processing channels from source...")
-              
+              # Clean channel display names
               for channel in root.findall(channel_tag):
-                  channel_id = channel.get('id', '')
                   display_name_elem = channel.find(display_name_tag)
-                  
                   if display_name_elem is not None and display_name_elem.text:
                       original_name = display_name_elem.text
                       new_name = original_name
                       
-                      # Apply replacements
+                      # Apply all replacements
                       for old, new in replacements.items():
                           if old in new_name:
                               new_name = new_name.replace(old, new)
                       
-                      # Handle standalone "SkySp"
+                      # Also handle standalone "SkySp" at beginning
                       new_name = re.sub(r'^SkySp\s+', 'Sky Sports ', new_name)
                       new_name = re.sub(r'^SkySp$', 'Sky Sports', new_name)
+                      
+                      # Fix any double spaces
                       new_name = re.sub(r'\s+', ' ', new_name).strip()
                       
-                      # Update display name
-                      display_name_elem.text = new_name
-                      
-                      # Determine if this is HD or SD
-                      is_hd = 'HD' in new_name or 'hd' in channel_id.lower()
-                      
-                      # Get base name (remove HD suffix)
-                      base_name = re.sub(r'\s+HD$', '', new_name, flags=re.IGNORECASE).strip()
-                      
-                      channels[channel_id] = {
-                          'element': channel,
-                          'name': new_name,
-                          'is_hd': is_hd,
-                          'base_name': base_name
-                      }
-                      
-                      print(f"  {channel_id}: {new_name} {'(HD)' if is_hd else '(SD)'}")
+                      if new_name != original_name:
+                          display_name_elem.text = new_name
+                          channels_cleaned += 1
+                          print(f"  {original_name} → {new_name}")
               
-              # Group channels by base name to find missing pairs
-              channel_groups = {}  # base_name -> {'sd': channel_id, 'hd': channel_id}
+              print(f"\n✅ Cleaned {channels_cleaned} channel names")
               
-              for channel_id, info in channels.items():
-                  base_name = info['base_name']
-                  if base_name not in channel_groups:
-                      channel_groups[base_name] = {'sd': None, 'hd': None}
-                  
-                  if info['is_hd']:
-                      channel_groups[base_name]['hd'] = channel_id
-                  else:
-                      channel_groups[base_name]['sd'] = channel_id
-              
-              # Create missing pairs
-              print("\n🔍 Checking for missing SD/HD pairs...")
-              channels_created = 0
-              programmes_copied = 0
-              
-              # First, collect all programme entries
-              all_programmes = list(root.findall(programme_tag))
-              
-              for base_name, pair in channel_groups.items():
-                  has_sd = pair['sd'] is not None
-                  has_hd = pair['hd'] is not None
-                  
-                  if has_sd and not has_hd:
-                      # Source has SD only - create HD version
-                      print(f"  ✨ Creating HD version for: {base_name} (SD only in source)")
-                      sd_channel_id = pair['sd']
-                      sd_channel_info = channels[sd_channel_id]
-                      
-                      # Create new HD channel ID
-                      new_channel_id = f"{sd_channel_id}.hd"
-                      if new_channel_id in channels:
-                          # Alternative naming if conflict
-                          new_channel_id = f"{base_name.replace(' ', '_')}_HD"
-                      
-                      # Deep copy the channel element
-                      new_channel = deepcopy(sd_channel_info['element'])
-                      new_channel.set('id', new_channel_id)
-                      
-                      # Update display name to add HD
-                      display_elem = new_channel.find(display_name_tag)
-                      if display_elem is not None:
-                          display_elem.text = f"{display_elem.text} HD"
-                      
-                      root.append(new_channel)
-                      channels_created += 1
-                      
-                      # Copy all programmes from SD to HD
-                      for programme in all_programmes:
-                          if programme.get('channel') == sd_channel_id:
-                              new_programme = deepcopy(programme)
-                              new_programme.set('channel', new_channel_id)
-                              root.append(new_programme)
-                              programmes_copied += 1
-                      
-                  elif has_hd and not has_sd:
-                      # Source has HD only - create SD version
-                      print(f"  ✨ Creating SD version for: {base_name} (HD only in source)")
-                      hd_channel_id = pair['hd']
-                      hd_channel_info = channels[hd_channel_id]
-                      
-                      # Create new SD channel ID
-                      new_channel_id = re.sub(r'\.hd$|\.HD$', '', hd_channel_id)
-                      if new_channel_id == hd_channel_id:
-                          new_channel_id = f"{hd_channel_id}.sd"
-                      if new_channel_id in channels:
-                          new_channel_id = f"{base_name.replace(' ', '_')}_SD"
-                      
-                      # Deep copy the channel element
-                      new_channel = deepcopy(hd_channel_info['element'])
-                      new_channel.set('id', new_channel_id)
-                      
-                      # Update display name to remove HD
-                      display_elem = new_channel.find(display_name_tag)
-                      if display_elem is not None:
-                          display_elem.text = re.sub(r'\s+HD$', '', display_elem.text)
-                      
-                      root.append(new_channel)
-                      channels_created += 1
-                      
-                      # Copy all programmes from HD to SD
-                      for programme in all_programmes:
-                          if programme.get('channel') == hd_channel_id:
-                              new_programme = deepcopy(programme)
-                              new_programme.set('channel', new_channel_id)
-                              root.append(new_programme)
-                              programmes_copied += 1
-                      
-                  elif has_sd and has_hd:
-                      # Both already exist - do nothing
-                      print(f"  ✓ Both SD and HD already exist for: {base_name}")
-              
-              # Final statistics
-              final_channel_count = len(root.findall(channel_tag))
-              final_programme_count = len(root.findall(programme_tag))
-              
-              print(f"\n📊 Summary:")
-              print(f"  Channels created: {channels_created}")
-              print(f"  Programmes copied: {programmes_copied}")
-              print(f"  Total channels now: {final_channel_count}")
-              print(f"  Total programmes now: {final_programme_count}")
-              
-              # Write the processed XML
+              # Write the cleaned XML
               tree.write('public/sky.xml', encoding='utf-8', xml_declaration=True)
-              print("\n✅ Processed EPG written to public/sky.xml")
-              
-              # Save stats for later
-              with open('public/stats.txt', 'w') as f:
-                  f.write(f"CHANNEL_COUNT={final_channel_count}\n")
-                  f.write(f"PROGRAMME_COUNT={final_programme_count}\n")
-                  f.write(f"CHANNELS_CREATED={channels_created}\n")
-                  f.write(f"PROGRAMMES_COPIED={programmes_copied}\n")
+              print("✅ Cleaned EPG written to public/sky.xml")
               
           except Exception as e:
               print(f"Error processing XML: {e}")
@@ -262,26 +152,21 @@ jobs:
               sys.exit(1)
           PYTHON_SCRIPT
           
-          python3 public/process_epg.py
+          # Run the Python script
+          python3 public/clean_channels.py
           
-          # Load stats for later steps
-          if [ -f public/stats.txt ]; then
-            source public/stats.txt
-            echo "CHANNEL_COUNT=$CHANNEL_COUNT" >> $GITHUB_ENV
-            echo "PROGRAMME_COUNT=$PROGRAMME_COUNT" >> $GITHUB_ENV
-            echo "CHANNELS_CREATED=$CHANNELS_CREATED" >> $GITHUB_ENV
-            echo "PROGRAMMES_COPIED=$PROGRAMMES_COPIED" >> $GITHUB_ENV
-          fi
-          
-          rm -f public/raw_epg.xml public/stats.txt
+          # Clean up
+          rm -f public/raw_epg.xml
+          echo "✅ Channel name cleaning complete"
 
-      - name: Final cleanup with sed
+      - name: Final cleanup with sed (additional safety)
         run: |
           echo "🔧 Running additional cleanup with sed..."
           
+          # Backup original just in case
           cp public/sky.xml public/sky.xml.bak
           
-          # Apply Sky Sports replacements
+          # Apply additional replacements with sed
           sed -i 's/SkySp /Sky Sports /g' public/sky.xml
           sed -i 's/SkySp Main Event/Sky Sports Main Event/g' public/sky.xml
           sed -i 's/SkySp Premier League/Sky Sports Premier League/g' public/sky.xml
@@ -296,67 +181,97 @@ jobs:
           sed -i 's/SkySp NFL/Sky Sports NFL/g' public/sky.xml
           sed -i 's/SkySp Racing/Sky Sports Racing/g' public/sky.xml
           
+          # Clean up any remaining "SkySp" variations
           sed -i 's/SkySp\([A-Z]\)/Sky Sports \1/g' public/sky.xml
           
+          # Remove the backup
           rm -f public/sky.xml.bak
+          
           echo "✅ Additional cleanup complete"
 
-      - name: Generate channel list report
+      - name: Validate XML and extract statistics
         run: |
-          cat > public/sky-channels.md << 'EOF'
-          # 📺 Sky UK EPG - Channel List
+          echo "🔍 Validating XML structure..."
           
-          *This EPG is automatically updated from epgshare01.online*
+          # Check if it's valid XML
+          if grep -q "<?xml" public/sky.xml; then
+            echo "✅ XML declaration found"
+          else
+            echo "⚠️ Warning: No XML declaration found"
+          fi
+          
+          # Count channels and programmes
+          CHANNEL_COUNT=$(grep -c "<channel" public/sky.xml || echo "0")
+          PROGRAMME_COUNT=$(grep -c "<programme" public/sky.xml || echo "0")
+          
+          # Count Sky Sports channels specifically
+          SKY_SPORTS_COUNT=$(grep -c "Sky Sports" public/sky.xml || echo "0")
+          
+          echo "📊 EPG Statistics:"
+          echo "   - Total channels: $CHANNEL_COUNT"
+          echo "   - Total programmes: $PROGRAMME_COUNT"
+          echo "   - Sky Sports channels: $SKY_SPORTS_COUNT"
+          
+          # Show sample of cleaned Sky Sports channels
+          echo ""
+          echo "📺 Sample Sky Sports channels found:"
+          grep "Sky Sports" public/sky.xml | head -10 | sed 's/^[[:space:]]*//'
+          
+          # Save stats for later use
+          echo "CHANNEL_COUNT=$CHANNEL_COUNT" >> $GITHUB_ENV
+          echo "PROGRAMME_COUNT=$PROGRAMME_COUNT" >> $GITHUB_ENV
+          echo "SKY_SPORTS_COUNT=$SKY_SPORTS_COUNT" >> $GITHUB_ENV
+
+      - name: Create EPG summary (sky-epg-info.md)
+        run: |
+          cat > public/sky-epg-info.md << 'EOF'
+          # 📺 Sky UK EPG Guide
+          
+          *This EPG (Electronic Program Guide) is automatically updated from epgshare01.online*
           
           ## Last Updated
           EOF
           
-          echo "- **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> public/sky-channels.md
-          echo "- **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
+          echo "- **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> public/sky-epg-info.md
+          echo "- **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
           
-          echo "## EPG Statistics" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
-          echo "| Metric | Value |" >> public/sky-channels.md
-          echo "|--------|-------|" >> public/sky-channels.md
-          echo "| Total Channels | ${{ env.CHANNEL_COUNT }} |" >> public/sky-channels.md
-          echo "| Total Programmes | ${{ env.PROGRAMME_COUNT }} |" >> public/sky-channels.md
-          echo "| SD/HD Channels Created | ${{ env.CHANNELS_CREATED }} |" >> public/sky-channels.md
-          echo "| Programmes Copied | ${{ env.PROGRAMMES_COPIED }} |" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
+          echo "## EPG Statistics" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "| Metric | Value |" >> public/sky-epg-info.md
+          echo "|--------|-------|" >> public/sky-epg-info.md
+          echo "| Total Channels | ${{ env.CHANNEL_COUNT }} |" >> public/sky-epg-info.md
+          echo "| Total Programmes | ${{ env.PROGRAMME_COUNT }} |" >> public/sky-epg-info.md
+          echo "| Sky Sports Channels | ${{ env.SKY_SPORTS_COUNT }} |" >> public/sky-epg-info.md
+          echo "| File Size | $(du -h public/sky.xml | cut -f1) |" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
           
-          echo "## Channel List (SD/HD Pairs)" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
-          echo "| Channel ID | Display Name | Type |" >> public/sky-channels.md
-          echo "|------------|--------------|------|" >> public/sky-channels.md
+          echo "## Channel Name Cleanup" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "The following replacements have been applied to channel names:" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "- \`SkySp\` → \`Sky Sports\`" >> public/sky-epg-info.md
+          echo "- \`SkyCine\` → \`Sky Cinema\`" >> public/sky-epg-info.md
+          echo "- \`SkyShow\` → \`Sky Showcase\`" >> public/sky-epg-info.md
+          echo "- \`SkyWit\` → \`Sky Witness\`" >> public/sky-epg-info.md
+          echo "- \`SkyAtl\` → \`Sky Atlantic\`" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
           
-          # Extract channels and identify SD/HD
-          while IFS= read -r line; do
-              if [[ $line =~ \<channel[[:space:]]+id=\"([^\"]+)\" ]]; then
-                  channel_id="${BASH_REMATCH[1]}"
-              fi
-              if [[ $line =~ \<display-name\>(.*)\</display-name\> ]]; then
-                  display_name="${BASH_REMATCH[1]}"
-                  if [[ "$display_name" == *"HD"* ]]; then
-                      type="HD"
-                  else
-                      type="SD"
-                  fi
-                  echo "| $channel_id | $display_name | $type |" >> public/sky-channels.md
-              fi
-          done < <(grep -E '<channel|display-name' public/sky.xml | head -100)
-          
-          echo "" >> public/sky-channels.md
-          echo "## Raw File Access" >> public/sky-channels.md
-          echo "" >> public/sky-channels.md
-          echo '```' >> public/sky-channels.md
-          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml" >> public/sky-channels.md
-          echo '```' >> public/sky-channels.md
+          echo "## Raw File Access" >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "The EPG XML file is available at:" >> public/sky-epg-info.md
+          echo '```' >> public/sky-epg-info.md
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml" >> public/sky-epg-info.md
+          echo '```' >> public/sky-epg-info.md
+          echo "" >> public/sky-epg-info.md
+          echo "---" >> public/sky-epg-info.md
+          echo "*Note: This file contains programme schedule data for UK channels. Channel names have been cleaned for better readability.*" >> public/sky-epg-info.md
 
-      - name: Verify sky.xml is valid
+      - name: Verify sky.xml is valid text (not binary)
         run: |
-          echo "🔍 Final verification..."
+          echo "🔍 Checking if sky.xml is a valid text file..."
           
+          # Check for null bytes (binary indicator)
           if grep -qP '\x00' public/sky.xml; then
             echo "❌ ERROR: sky.xml contains binary data"
             exit 1
@@ -364,27 +279,36 @@ jobs:
             echo "✅ sky.xml is a valid text file - raw URL will work!"
           fi
           
+          # Show sample of cleaned channel names
           echo ""
-          echo "📊 Final Statistics:"
-          echo "   Total channels: ${{ env.CHANNEL_COUNT }}"
-          echo "   Total programmes: ${{ env.PROGRAMME_COUNT }}"
-          echo "   New channels created: ${{ env.CHANNELS_CREATED }}"
+          echo "📺 Sample cleaned channel names:"
+          grep -o 'display-name>[^<]*Sky Sports[^<]*' public/sky.xml | head -5 | sed 's/display-name>//g'
 
       - name: Commit and push updated files
         run: |
           git config --global user.name "EPG Update Bot"
           git config --global user.email "actions@github.com"
           
-          git add public/sky.xml public/sky-channels.md
+          # Add the cleaned XML and the info file
+          git add public/sky.xml public/sky-epg-info.md
           
+          # Check if there are changes to commit
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes to commit (EPG already up to date)"
           else
-            git commit -m "Update sky.xml EPG: $(date +'%Y-%m-%d') - ${{ env.CHANNEL_COUNT }} channels (${{ env.CHANNELS_CREATED }} new SD/HD pairs)"
+            git commit -m "Update sky.xml EPG: $(date +'%Y-%m-%d') - ${{ env.CHANNEL_COUNT }} channels, ${{ env.PROGRAMME_COUNT }} programmes, ${{ env.SKY_SPORTS_COUNT }} Sky Sports channels"
             git push
             echo "✅ Changes committed and pushed"
             
+            # Output the URLs for convenience
             echo ""
-            echo "📺 EPG updated successfully!"
-            echo "   Raw XML: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
+            echo "📺 EPG updated successfully with cleaned channel names!"
+            echo "   📄 Raw XML: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
+            echo "   📊 Info page: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky-epg-info.md"
+            echo "   🔗 GitHub view: https://github.com/${{ github.repository }}/blob/main/public/sky.xml"
           fi
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          echo "⚠️ Workflow failed. Check the error messages above."
