@@ -3,7 +3,7 @@
 *This EPG (Electronic Program Guide) is automatically updated from epgshare01.online*
 
 ## Last Updated
-- **Date:** 2026-04-18 04:23 UTC
+- **Date:** 2026-04-18 04:48 UTC
 - **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
 
 ## EPG Statistics
@@ -12,25 +12,28 @@
 |--------|-------|
 | Total Channels | 477 |
 | Total Programmes | 41357 |
-| Sky Sports Channels | 305 |
-| File Size | 22M |
+| Sky Sports Channels | 589 |
+| Sky Cinema Channels | 53 |
+| Channel Names Cleaned | 50 |
+| File Size | 21M |
 
-## Channel Name Cleanup
+## Channel Name Cleanup Applied
 
-The following replacements have been applied to channel names:
+The following transformations have been applied:
 
-- `SkySp` → `Sky Sports`
-- `SkyCine` → `Sky Cinema`
-- `SkyShow` → `Sky Showcase`
-- `SkyWit` → `Sky Witness`
-- `SkyAtl` → `Sky Atlantic`
+| Original Pattern | Cleaned Name |
+|-----------------|--------------|
+| SkySp+, SkySp MainEv | Sky Sports Plus / Main Event |
+| SkySp Premier League, SkySp PremLg | Sky Sports Premier League |
+| SkySp Football, SkySp Foot | Sky Sports Football |
+| SkySp Cricket, SkySp Cric | Sky Sports Cricket |
+| SkySp Racing, SkySp Race | Sky Sports Racing |
+| SkyCine, SkyCine+ | Sky Cinema / Plus |
+| SkyShow, SkyWit, SkyAtl | Sky Showcase / Witness / Atlantic |
+| BTSp, BTSport | BT Sport |
 
 ## Raw File Access
 
-The EPG XML file is available at:
 ```
 https://raw.githubusercontent.com/anilwee/fxtl/main/public/sky.xml
 ```
-
----
-*Note: This file contains programme schedule data for UK channels. Channel names have been cleaned for better readability.*
