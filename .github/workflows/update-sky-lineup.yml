@@ -23,11 +23,9 @@ jobs:
         run: |
           echo "📡 Downloading UK EPG from epgshare01..."
           
-          # Try with curl first (more flexible than wget)
           curl -L -o public/epg_ripper_UK1.xml.gz https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz || \
           wget -qO public/epg_ripper_UK1.xml.gz https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
           
-          # Check if download succeeded
           if [ -f public/epg_ripper_UK1.xml.gz ] && [ -s public/epg_ripper_UK1.xml.gz ]; then
             echo "✅ Download successful"
             echo "📦 Compressed size: $(wc -c < public/epg_ripper_UK1.xml.gz) bytes"
@@ -39,11 +37,8 @@ jobs:
       - name: Decompress XML.gz to raw_epg.xml
         run: |
           echo "🔓 Decompressing XML.gz file..."
-          
-          # Decompress the gzip file to raw_epg.xml
           gunzip -c public/epg_ripper_UK1.xml.gz > public/raw_epg.xml
           
-          # Verify decompression
           if [ -f public/raw_epg.xml ] && [ -s public/raw_epg.xml ]; then
             echo "✅ Decompression successful"
             echo "📄 Uncompressed size: $(wc -c < public/raw_epg.xml) bytes"
@@ -52,15 +47,12 @@ jobs:
             exit 1
           fi
           
-          # Remove the compressed file to save space
           rm -f public/epg_ripper_UK1.xml.gz
-          echo "🗑️ Removed compressed file"
 
-      - name: Clean channel names (SkySp → Sky Sports, etc.)
+      - name: Clean channel names (comprehensive Sky Sports + abbreviations)
         run: |
-          echo "🔧 Cleaning channel names..."
+          echo "🔧 Cleaning channel names (SkySp+, MainEv, etc.)..."
           
-          # Create Python script for channel name cleaning
           cat > public/clean_channels.py << 'PYTHON_SCRIPT'
           import xml.etree.ElementTree as ET
           import re
@@ -81,15 +73,20 @@ jobs:
               channel_tag = f"{namespace}channel" if namespace else "channel"
               display_name_tag = f"{namespace}display-name" if namespace else "display-name"
               
-              # Define channel name replacements
+              # Comprehensive channel name replacements
               replacements = {
-                  # Sky Sports replacements
-                  'SkySp ': 'Sky Sports ',
+                  # Sky Sports variations
+                  'SkySp+': 'Sky Sports Plus',
                   'SkySp Main Event': 'Sky Sports Main Event',
+                  'SkySp MainEv': 'Sky Sports Main Event',
                   'SkySp Premier League': 'Sky Sports Premier League',
+                  'SkySp PremLg': 'Sky Sports Premier League',
                   'SkySp Football': 'Sky Sports Football',
+                  'SkySp Foot': 'Sky Sports Football',
                   'SkySp Cricket': 'Sky Sports Cricket',
+                  'SkySp Cric': 'Sky Sports Cricket',
                   'SkySp Golf': 'Sky Sports Golf',
+                  'SkySp F1': 'Sky Sports F1',
                   'SkySp F1': 'Sky Sports F1',
                   'SkySp Action': 'Sky Sports Action',
                   'SkySp Arena': 'Sky Sports Arena',
@@ -97,15 +94,33 @@ jobs:
                   'SkySp Mix': 'Sky Sports Mix',
                   'SkySp NFL': 'Sky Sports NFL',
                   'SkySp Racing': 'Sky Sports Racing',
+                  'SkySp Race': 'Sky Sports Racing',
+                  'SkySp': 'Sky Sports',
                   
-                  # Other common abbreviations
+                  # Sky Cinema variations
                   'SkyCine': 'Sky Cinema',
+                  'SkyCine+': 'Sky Cinema Plus',
+                  'SkyCine Prem': 'Sky Cinema Premiere',
+                  'SkyCine Select': 'Sky Cinema Select',
+                  
+                  # Other Sky channels
                   'SkyShow': 'Sky Showcase',
                   'SkyWit': 'Sky Witness',
                   'SkyAtl': 'Sky Atlantic',
                   'SkyOne': 'Sky One',
                   'SkyTwo': 'Sky Two',
                   'SkyLiv': 'Sky Living',
+                  'SkyArts': 'Sky Arts',
+                  'SkyNature': 'Sky Nature',
+                  'SkyHistory': 'Sky History',
+                  'SkyCrime': 'Sky Crime',
+                  'SkyComedy': 'Sky Comedy',
+                  'SkyDocs': 'Sky Documentaries',
+                  
+                  # BT Sport variations
+                  'BTSp': 'BT Sport',
+                  'BTSport': 'BT Sport',
+                  'BT Sport': 'BT Sport',
                   
                   # General fixes
                   ' HD': ' HD',
@@ -114,6 +129,7 @@ jobs:
               }
               
               channels_cleaned = 0
+              cleaning_log = []
               
               # Clean channel display names
               for channel in root.findall(channel_tag):
@@ -127,9 +143,28 @@ jobs:
                           if old in new_name:
                               new_name = new_name.replace(old, new)
                       
-                      # Also handle standalone "SkySp" at beginning
+                      # Handle standalone patterns with regex
+                      # Fix "SkySp" followed by space or end of string
                       new_name = re.sub(r'^SkySp\s+', 'Sky Sports ', new_name)
                       new_name = re.sub(r'^SkySp$', 'Sky Sports', new_name)
+                      
+                      # Fix "MainEv" pattern
+                      new_name = re.sub(r'MainEv', 'Main Event', new_name)
+                      
+                      # Fix "PremLg" pattern
+                      new_name = re.sub(r'PremLg', 'Premier League', new_name)
+                      
+                      # Fix "Foot" pattern (but not Football already)
+                      new_name = re.sub(r'\bFoot\b', 'Football', new_name)
+                      
+                      # Fix "Cric" pattern
+                      new_name = re.sub(r'\bCric\b', 'Cricket', new_name)
+                      
+                      # Fix "Race" pattern
+                      new_name = re.sub(r'\bRace\b', 'Racing', new_name)
+                      
+                      # Fix any remaining abbreviations
+                      new_name = re.sub(r'([A-Z][a-z]+)([A-Z][a-z]+)', r'\1 \2', new_name)
                       
                       # Fix any double spaces
                       new_name = re.sub(r'\s+', ' ', new_name).strip()
@@ -137,13 +172,21 @@ jobs:
                       if new_name != original_name:
                           display_name_elem.text = new_name
                           channels_cleaned += 1
-                          print(f"  {original_name} → {new_name}")
+                          cleaning_log.append(f"  {original_name} → {new_name}")
+                          if len(cleaning_log) <= 30:  # Print first 30 changes
+                              print(f"  {original_name} → {new_name}")
               
               print(f"\n✅ Cleaned {channels_cleaned} channel names")
+              if channels_cleaned > 30:
+                  print(f"   (... and {channels_cleaned - 30} more changes)")
               
               # Write the cleaned XML
               tree.write('public/sky.xml', encoding='utf-8', xml_declaration=True)
               print("✅ Cleaned EPG written to public/sky.xml")
+              
+              # Save cleaning stats
+              with open('public/cleaning_stats.txt', 'w') as f:
+                  f.write(f"CHANNELS_CLEANED={channels_cleaned}\n")
               
           except Exception as e:
               print(f"Error processing XML: {e}")
@@ -152,26 +195,33 @@ jobs:
               sys.exit(1)
           PYTHON_SCRIPT
           
-          # Run the Python script
           python3 public/clean_channels.py
           
-          # Clean up
-          rm -f public/raw_epg.xml
+          # Load cleaning stats
+          if [ -f public/cleaning_stats.txt ]; then
+            source public/cleaning_stats.txt
+            echo "CHANNELS_CLEANED=$CHANNELS_CLEANED" >> $GITHUB_ENV
+          fi
+          
+          rm -f public/raw_epg.xml public/cleaning_stats.txt
           echo "✅ Channel name cleaning complete"
 
-      - name: Final cleanup with sed (additional safety)
+      - name: Final cleanup with sed (comprehensive)
         run: |
           echo "🔧 Running additional cleanup with sed..."
           
-          # Backup original just in case
           cp public/sky.xml public/sky.xml.bak
           
-          # Apply additional replacements with sed
-          sed -i 's/SkySp /Sky Sports /g' public/sky.xml
+          # Sky Sports variations
+          sed -i 's/SkySp+/Sky Sports Plus/g' public/sky.xml
           sed -i 's/SkySp Main Event/Sky Sports Main Event/g' public/sky.xml
+          sed -i 's/SkySp MainEv/Sky Sports Main Event/g' public/sky.xml
           sed -i 's/SkySp Premier League/Sky Sports Premier League/g' public/sky.xml
+          sed -i 's/SkySp PremLg/Sky Sports Premier League/g' public/sky.xml
           sed -i 's/SkySp Football/Sky Sports Football/g' public/sky.xml
+          sed -i 's/SkySp Foot/Sky Sports Football/g' public/sky.xml
           sed -i 's/SkySp Cricket/Sky Sports Cricket/g' public/sky.xml
+          sed -i 's/SkySp Cric/Sky Sports Cricket/g' public/sky.xml
           sed -i 's/SkySp Golf/Sky Sports Golf/g' public/sky.xml
           sed -i 's/SkySp F1/Sky Sports F1/g' public/sky.xml
           sed -i 's/SkySp Action/Sky Sports Action/g' public/sky.xml
@@ -180,47 +230,80 @@ jobs:
           sed -i 's/SkySp Mix/Sky Sports Mix/g' public/sky.xml
           sed -i 's/SkySp NFL/Sky Sports NFL/g' public/sky.xml
           sed -i 's/SkySp Racing/Sky Sports Racing/g' public/sky.xml
+          sed -i 's/SkySp Race/Sky Sports Racing/g' public/sky.xml
+          sed -i 's/SkySp /Sky Sports /g' public/sky.xml
           
-          # Clean up any remaining "SkySp" variations
+          # MainEv pattern
+          sed -i 's/MainEv/Main Event/g' public/sky.xml
+          sed -i 's/PremLg/Premier League/g' public/sky.xml
+          
+          # Sky Cinema variations
+          sed -i 's/SkyCine+/Sky Cinema Plus/g' public/sky.xml
+          sed -i 's/SkyCine Prem/Sky Cinema Premiere/g' public/sky.xml
+          sed -i 's/SkyCine Select/Sky Cinema Select/g' public/sky.xml
+          sed -i 's/SkyCine /Sky Cinema /g' public/sky.xml
+          
+          # Other Sky channels
+          sed -i 's/SkyShow/Sky Showcase/g' public/sky.xml
+          sed -i 's/SkyWit/Sky Witness/g' public/sky.xml
+          sed -i 's/SkyAtl/Sky Atlantic/g' public/sky.xml
+          sed -i 's/SkyOne/Sky One/g' public/sky.xml
+          sed -i 's/SkyTwo/Sky Two/g' public/sky.xml
+          sed -i 's/SkyLiv/Sky Living/g' public/sky.xml
+          sed -i 's/SkyArts/Sky Arts/g' public/sky.xml
+          sed -i 's/SkyNature/Sky Nature/g' public/sky.xml
+          sed -i 's/SkyHistory/Sky History/g' public/sky.xml
+          sed -i 's/SkyCrime/Sky Crime/g' public/sky.xml
+          sed -i 's/SkyComedy/Sky Comedy/g' public/sky.xml
+          sed -i 's/SkyDocs/Sky Documentaries/g' public/sky.xml
+          
+          # BT Sport
+          sed -i 's/BTSp /BT Sport /g' public/sky.xml
+          sed -i 's/BTSport/BT Sport/g' public/sky.xml
+          
+          # Clean up any remaining patterns
           sed -i 's/SkySp\([A-Z]\)/Sky Sports \1/g' public/sky.xml
           
-          # Remove the backup
-          rm -f public/sky.xml.bak
+          # Fix any double spaces
+          sed -i 's/  / /g' public/sky.xml
           
+          rm -f public/sky.xml.bak
           echo "✅ Additional cleanup complete"
 
       - name: Validate XML and extract statistics
         run: |
           echo "🔍 Validating XML structure..."
           
-          # Check if it's valid XML
           if grep -q "<?xml" public/sky.xml; then
             echo "✅ XML declaration found"
           else
             echo "⚠️ Warning: No XML declaration found"
           fi
           
-          # Count channels and programmes
           CHANNEL_COUNT=$(grep -c "<channel" public/sky.xml || echo "0")
           PROGRAMME_COUNT=$(grep -c "<programme" public/sky.xml || echo "0")
-          
-          # Count Sky Sports channels specifically
           SKY_SPORTS_COUNT=$(grep -c "Sky Sports" public/sky.xml || echo "0")
+          SKY_CINEMA_COUNT=$(grep -c "Sky Cinema" public/sky.xml || echo "0")
           
           echo "📊 EPG Statistics:"
           echo "   - Total channels: $CHANNEL_COUNT"
           echo "   - Total programmes: $PROGRAMME_COUNT"
           echo "   - Sky Sports channels: $SKY_SPORTS_COUNT"
+          echo "   - Sky Cinema channels: $SKY_CINEMA_COUNT"
+          echo "   - Channel names cleaned: ${{ env.CHANNELS_CLEANED }}"
           
-          # Show sample of cleaned Sky Sports channels
           echo ""
-          echo "📺 Sample Sky Sports channels found:"
+          echo "📺 Sample cleaned Sky Sports channels:"
           grep "Sky Sports" public/sky.xml | head -10 | sed 's/^[[:space:]]*//'
           
-          # Save stats for later use
+          echo ""
+          echo "🎬 Sample cleaned Sky Cinema channels:"
+          grep "Sky Cinema" public/sky.xml | head -5 | sed 's/^[[:space:]]*//'
+          
           echo "CHANNEL_COUNT=$CHANNEL_COUNT" >> $GITHUB_ENV
           echo "PROGRAMME_COUNT=$PROGRAMME_COUNT" >> $GITHUB_ENV
           echo "SKY_SPORTS_COUNT=$SKY_SPORTS_COUNT" >> $GITHUB_ENV
+          echo "SKY_CINEMA_COUNT=$SKY_CINEMA_COUNT" >> $GITHUB_ENV
 
       - name: Create EPG summary (sky-epg-info.md)
         run: |
@@ -243,35 +326,37 @@ jobs:
           echo "| Total Channels | ${{ env.CHANNEL_COUNT }} |" >> public/sky-epg-info.md
           echo "| Total Programmes | ${{ env.PROGRAMME_COUNT }} |" >> public/sky-epg-info.md
           echo "| Sky Sports Channels | ${{ env.SKY_SPORTS_COUNT }} |" >> public/sky-epg-info.md
+          echo "| Sky Cinema Channels | ${{ env.SKY_CINEMA_COUNT }} |" >> public/sky-epg-info.md
+          echo "| Channel Names Cleaned | ${{ env.CHANNELS_CLEANED }} |" >> public/sky-epg-info.md
           echo "| File Size | $(du -h public/sky.xml | cut -f1) |" >> public/sky-epg-info.md
           echo "" >> public/sky-epg-info.md
           
-          echo "## Channel Name Cleanup" >> public/sky-epg-info.md
+          echo "## Channel Name Cleanup Applied" >> public/sky-epg-info.md
           echo "" >> public/sky-epg-info.md
-          echo "The following replacements have been applied to channel names:" >> public/sky-epg-info.md
+          echo "The following transformations have been applied:" >> public/sky-epg-info.md
           echo "" >> public/sky-epg-info.md
-          echo "- \`SkySp\` → \`Sky Sports\`" >> public/sky-epg-info.md
-          echo "- \`SkyCine\` → \`Sky Cinema\`" >> public/sky-epg-info.md
-          echo "- \`SkyShow\` → \`Sky Showcase\`" >> public/sky-epg-info.md
-          echo "- \`SkyWit\` → \`Sky Witness\`" >> public/sky-epg-info.md
-          echo "- \`SkyAtl\` → \`Sky Atlantic\`" >> public/sky-epg-info.md
+          echo "| Original Pattern | Cleaned Name |" >> public/sky-epg-info.md
+          echo "|-----------------|--------------|" >> public/sky-epg-info.md
+          echo "| SkySp+, SkySp MainEv | Sky Sports Plus / Main Event |" >> public/sky-epg-info.md
+          echo "| SkySp Premier League, SkySp PremLg | Sky Sports Premier League |" >> public/sky-epg-info.md
+          echo "| SkySp Football, SkySp Foot | Sky Sports Football |" >> public/sky-epg-info.md
+          echo "| SkySp Cricket, SkySp Cric | Sky Sports Cricket |" >> public/sky-epg-info.md
+          echo "| SkySp Racing, SkySp Race | Sky Sports Racing |" >> public/sky-epg-info.md
+          echo "| SkyCine, SkyCine+ | Sky Cinema / Plus |" >> public/sky-epg-info.md
+          echo "| SkyShow, SkyWit, SkyAtl | Sky Showcase / Witness / Atlantic |" >> public/sky-epg-info.md
+          echo "| BTSp, BTSport | BT Sport |" >> public/sky-epg-info.md
           echo "" >> public/sky-epg-info.md
           
           echo "## Raw File Access" >> public/sky-epg-info.md
           echo "" >> public/sky-epg-info.md
-          echo "The EPG XML file is available at:" >> public/sky-epg-info.md
           echo '```' >> public/sky-epg-info.md
           echo "https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml" >> public/sky-epg-info.md
           echo '```' >> public/sky-epg-info.md
-          echo "" >> public/sky-epg-info.md
-          echo "---" >> public/sky-epg-info.md
-          echo "*Note: This file contains programme schedule data for UK channels. Channel names have been cleaned for better readability.*" >> public/sky-epg-info.md
 
-      - name: Verify sky.xml is valid text (not binary)
+      - name: Verify sky.xml is valid text
         run: |
-          echo "🔍 Checking if sky.xml is a valid text file..."
+          echo "🔍 Final verification..."
           
-          # Check for null bytes (binary indicator)
           if grep -qP '\x00' public/sky.xml; then
             echo "❌ ERROR: sky.xml contains binary data"
             exit 1
@@ -279,33 +364,31 @@ jobs:
             echo "✅ sky.xml is a valid text file - raw URL will work!"
           fi
           
-          # Show sample of cleaned channel names
           echo ""
-          echo "📺 Sample cleaned channel names:"
+          echo "📺 Sample of cleaned channel names:"
+          echo "   Sky Sports channels:"
           grep -o 'display-name>[^<]*Sky Sports[^<]*' public/sky.xml | head -5 | sed 's/display-name>//g'
+          echo ""
+          echo "   Sky Cinema channels:"
+          grep -o 'display-name>[^<]*Sky Cinema[^<]*' public/sky.xml | head -5 | sed 's/display-name>//g'
 
       - name: Commit and push updated files
         run: |
           git config --global user.name "EPG Update Bot"
           git config --global user.email "actions@github.com"
           
-          # Add the cleaned XML and the info file
           git add public/sky.xml public/sky-epg-info.md
           
-          # Check if there are changes to commit
           if git diff --staged --quiet; then
-            echo "No changes to commit (EPG already up to date)"
+            echo "No changes to commit"
           else
-            git commit -m "Update sky.xml EPG: $(date +'%Y-%m-%d') - ${{ env.CHANNEL_COUNT }} channels, ${{ env.PROGRAMME_COUNT }} programmes, ${{ env.SKY_SPORTS_COUNT }} Sky Sports channels"
+            git commit -m "Update sky.xml EPG: $(date +'%Y-%m-%d') - ${{ env.CHANNEL_COUNT }} channels, ${{ env.SKY_SPORTS_COUNT }} Sky Sports, ${{ env.SKY_CINEMA_COUNT }} Sky Cinema"
             git push
             echo "✅ Changes committed and pushed"
             
-            # Output the URLs for convenience
             echo ""
-            echo "📺 EPG updated successfully with cleaned channel names!"
-            echo "   📄 Raw XML: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
-            echo "   📊 Info page: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky-epg-info.md"
-            echo "   🔗 GitHub view: https://github.com/${{ github.repository }}/blob/main/public/sky.xml"
+            echo "📺 EPG updated successfully!"
+            echo "   Raw XML: https://raw.githubusercontent.com/${{ github.repository }}/main/public/sky.xml"
           fi
 
       - name: Cleanup on failure
