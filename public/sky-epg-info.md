@@ -3,7 +3,7 @@
 *This EPG (Electronic Program Guide) is automatically updated from epgshare01.online*
 
 ## Last Updated
-- **Date:** 2026-04-22 15:04 UTC
+- **Date:** 2026-04-23 04:43 UTC
 - **Source:** https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
 
 ## EPG Statistics
@@ -11,9 +11,9 @@
 | Metric | Value |
 |--------|-------|
 | Total Channels | 477 |
-| Total Programmes | 41544 |
-| Sky Sports Channels | 512 |
-| Sky Cinema Channels | 57 |
+| Total Programmes | 41262 |
+| Sky Sports Channels | 494 |
+| Sky Cinema Channels | 48 |
 | Channel Names Cleaned | 50 |
 | File Size | 21M |
 
