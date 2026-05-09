@@ -90,8 +90,8 @@
 | 9LifePerth.au | 9Life Perth |
 | 9LifeSydney.au | 9Life Sydney |
 | 9LifeTasmania.au | 9Life Tasmania |
-| 9RushAdelaide.au | 9Rush |
 | 9RushBrisbane.au | 9Rush |
+| 9RushAdelaide.au | 9Rush |
 | 9RushMelbourne.au | 9Rush Melbourne |
 | 9RushPerth.au | 9Rush Perth |
 | 9RushSydney.au | 9Rush Sydney |
@@ -418,4 +418,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-05-09 04:57 UTC*
+*Last updated: 2026-05-09 14:41 UTC*
