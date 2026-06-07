@@ -137,12 +137,252 @@
 | Dragons.nrl | NRL - St. George Illawarra Dragons |
 | Titans.nrlw | NRLW - Gold Coast Titans |
 | Dragons.nrlw | NRLW - St. George Illawarra Dragons |
+| SBSVicelandSydney.au | SBS Viceland Sydney |
+| SBSWorldMoviesSydney.au | SBS World Movies Sydney |
+| RACINGCOM.au | RACING.COM |
+| SKYRacing2.au | SKY Racing 2 |
+| SKYRacing1.au | SKY Racing 1 |
+| SKYNewsUK.au | SKY News UK |
+| SkyNewsAustralia.au | Sky News Australia |
+| SkyNewsExtra.au | Sky News Extra |
+| FOXTELOne.au | FOXTEL One |
+| UKTV.au | UKTV |
+| LifeStyle.au | LifeStyle |
+| FOX8.au | FOX8 |
+| ARENA.au | FOX ARENA |
+| SHOWCASE.au | FOX SHOWCASE |
+| Crime.au | FOX Crime |
+| Comedy.au | FOX Comedy |
+| Classics.au | FOX Classics |
+| UniversalTV.au | Universal TV |
+| TLC.au | TLC |
+| LifeStyleFood.au | LifeStyle Food |
+| LifeStyleHome.au | LifeStyle Home |
+| DiscoveryChannel.au | Discovery Channel |
+| RealCrime.au | Real Crime |
+| InvestigationDiscovery.au | Investigation Discovery |
+| AnimalPlanet.au | Animal Planet |
+| DiscoveryTurbo.au | Discovery Turbo |
+| BoxSets.au | BoxSets |
+| GOOD.au | GOOD |
+| SonLife.au | SonLife |
+| FOXOne+2.au | FOX One +2 |
+| UKTV+2.au | UKTV+2 |
+| LifeStyle+2.au | LifeStyle +2 |
+| FOX8+2.au | FOX8+2 |
+| ARENA+2.au | FOX ARENA +2 |
+| SHOWCASE+2.au | FOX SHOWCASE +2 |
+| Crime+2.au | FOX Crime +2 |
+| Comedy+2.au | FOX Comedy +2 |
+| Classics+2.au | FOX Classics+2 |
+| LifeStyleFood+2.au | LifeStyle Food +2 |
+| Discovery+2.au | Discovery +2 |
+| DiscoveryTurbo+2.au | Discovery Turbo +2 |
+| FoxtelMoviesUltraHD.au | Foxtel Movies Ultra HD |
+| FoxtelMoviesPremiere.au | Foxtel Movies Premiere |
+| FoxtelMoviesHits.au | Foxtel Movies Hits |
+| FoxtelMoviesFamily.au | Foxtel Movies Family |
+| FoxtelMoviesAction.au | Foxtel Movies Action |
+| FoxtelMoviesComedy.au | Foxtel Movies Comedy |
+| FoxtelMoviesRomance.au | Foxtel Movies Romance |
+| FoxtelMoviesDrama.au | Foxtel Movies Drama |
+| FoxtelMoviesGreats.au | Foxtel Movies Greats |
+| FoxtelMoviesPremiere+2.au | Foxtel Movies Premiere +2 |
+| FoxtelMoviesAction+2.au | Foxtel Movies Action +2 |
+| FoxtelMoviesFamily+2.au | Foxtel Movies Family +2 |
+| CNN.au | CNN |
+| CNBC.au | CNBC |
+| SBSWorldWatch.au | SBS World Watch |
+| FoxNews.au | Fox News |
+| NSW-SydneyFOXCRICKET.au | FOX CRICKET |
+| NSW-SydneyFOXLEAGUE.au | FOX LEAGUE |
+| NSW-SydneyFOXSPORTS503.au | FOX SPORTS 503 |
+| NSW-SydneyFoxFooty.au | Fox Footy |
+| NSW-SydneyFOXSPORTS505.au | FOX SPORTS 505 |
+| NSW-SydneyFOXSPORTS506.au | FOX SPORTS 506 |
+| NSW-SydneyFOXSPORTSMORE.au | FOX SPORTS MORE |
+| ESPN2.au | ESPN2 |
+| REALLIFE.au | REAL.LIFE |
+| REALLIFE+2.au | REAL.LIFE +2 |
+| NSW-SydneyFoxSportsNews.au | Fox Sports News |
+| Max.au | Max |
+| BBCSelect.us | US - BBC Select |
+| BBCEntertain.us | US - BBC Entertain |
+| BBCFirst.au | BBC First |
+| ABCAdelaide.au | ABC Adelaide |
+| ABCKids_ABCTVPlusAdelaide.au | ABC Kids/ABC TV Plus Adelaide |
+| ABCMeAdelaide.au | ABC ME Adelaide |
+| ABCNewsAdelaide.au | ABC News Adelaide |
+| SBSAdelaide.au | SBS Adelaide |
+| SBSVicelandAdelaide.au | SBS Viceland Adelaide |
+| SBSFoodAdelaide.au | SBS Food Adelaide |
+| SBSWorldMoviesAdelaide.au | SBS World Movies Adelaide |
+| 7TWOAdelaide.au | 7TWO Adelaide |
+| 7mateAdelaide.au | 7mate Adelaide |
+| 7FlixAdelaide.au | 7Flix Adelaide |
+| 7BravoAdelaide.au | 7Bravo Adelaide |
+| 7Adelaide.au | 7 Adelaide |
+| 9GoAdelaide.au | 9Go! Adelaide |
+| 9LifeAdelaide.au | 9Life Adelaide |
+| 9GemAdelaide.au | 9Gem Adelaide |
+| Channel9Adelaide.au | Channel 9 Adelaide |
+| 9RushAdelaide.au | 9Rush |
+| Channel10Adelaide.au | Channel 10 Adelaide |
+| 10BOLDAdelaide.au | 10 BOLD Adelaide |
+| 10PeachAdelaide.au | 10 Peach Adelaide |
+| 10ShakeAdelaide.au | 10 Shake Adelaide |
+| ABCBrisbane.au | ABC Brisbane |
+| ABCKids_ABCTV PlusBrisbane.au | ABC Kids/ABC TV Plus |
+| ABCNewsBrisbane.au | ABC News Adelaide Adelaide Brisbane |
+| ABCMEBrisbane.au | ABC ME Brisbane |
+| SBSBrisbane.au | QLD-Brisbane SBS HD |
+| SBSVicelandBrisbane.au | QLD-Brisbane SBS Viceland |
+| SBSFoodBrisbane.au | QLD-Brisbane SBS Food QLD |
+| SBSWorldMoviesBrisbane.au | SBS World Movies Brisbane |
+| 7Brisbane.au | 7 Brisbane |
+| 7BravoBrisbane.au | 7Bravo Brisbane |
+| 7TWOBrisbane.au | 7TWO Brisbane |
+| 7mateBrisbane.au | 7mate Brisbane |
+| 7FlixBrisbane.au | 7Flix Brisbane |
+| Channel9Brisbane.au | Channel 9 Brisbane |
+| 9GoBrisbane.au | 9Go! Brisbane |
+| 9LifeBrisbane.au | 9Life Brisbane |
+| 9GemBrisbane.au | 9Gem Brisbane |
+| 9RushBrisbane.au | 9Rush |
+| 10Brisbane.au | 10 Brisbane |
+| 10BOLDBrisbane.au | 10 BOLD Brisbane |
+| 10PeachBrisbane.au | 10 Peach Brisbane |
+| 10ShakeBrisbane.au | 10 Shake Brisbane |
+| ABCTVCanberra.au | ABC TV Canberra |
+| ABCKids_ABC VPlusCanberra.au | ABC Kids/ABC TV Plus Canberra |
+| ABCNewsCanberra.au | ABC News Adelaide Adelaide Canberra |
+| ABCMECanberra.au | ABC ME Canberra |
+| SBSCanberra.au | SBS Canberra |
+| SBSVicelandCanberra.au | SBS Viceland Canberra |
+| SBSFoodCanberra.au | SBS Food Canberra |
+| SBSWorldMoviesCanberra.au | SBS World Movies Canberra |
+| 7Canberra.au | 7 Canberra |
+| 7BravoCanberra.au | 7Bravo Canberra |
+| 7TWOCanberra.au | 7TWO Canberra |
+| 7mateCanberra.au | 7mate Canberra |
+| 7flixCanberra.au | 7flix Canberra |
+| 9Canberra.au | 9 Canberra |
+| 9GEMCanberra.au | 9GEM Canberra |
+| 9GO!Canberra.au | 9GO Canberra |
+| 9LifeCanberra.au | 9Life Canberra |
+| WINBoldCanberra.au | WIN Bold Canberra |
+| WINPeachCanberra.au | WIN Peach Canberra |
+| ABCNewsDarwin.au | ABC News Adelaide Adelaide Darwin |
+| ABCDarwin.au | ABC Darwin |
+| ABCMEDarwin.au | ABC ME Darwin |
+| ABCKids_ABCTVPlusDarwin.au | ABC Kids/ABC TV Plus Darwin |
+| SBSDarwin.au | SBS Darwin |
+| SBSFoodDarwin.au | SBS Food Darwin |
+| SBSVicelandDarwin.au | SBS Viceland Darwin |
+| SBSWorldMoviesDarwin.au | SBS World Movies Darwin |
+| 7Darwin.au | 7 Darwin |
+| 7TWODarwin.au | 7TWO Darwin |
+| 7mateDarwin.au | 7mate Darwin |
+| 9Darwin.au | 9 Darwin |
+| 9GemDarwin.au | 9Gem Darwin |
+| 9GODarwin.au | 9GO! Darwin |
+| 9LifeDarwin.au | 9Life |
+| 10Darwin.au | 10 Darwin |
+| 10BOLDDarwin.au | 10 Bold Darwin |
+| 10PeachDarwin.au | 10 Peach Darwin |
+| ABCHobart.au | ABC Hobart |
+| ABCNewsHobart.au | ABC News Adelaide Adelaide Hobart |
+| ABCKids_ABCTVPlusHobart.au | ABC Kids/ABC TV Plus Hobart |
+| ABCMEHobart.au | ABC ME Hobart |
+| SBSHobart.au | SBS Hobart |
+| SBSFoodHobart.au | SBS Food Hobart |
+| SBSVicelandHobart.au | SBS Viceland Hobart |
+| SBSWorldMoviesHobart.au | SBS World Movies Hobart |
+| 7TWOHobart.au | 7TWO Hobart |
+| 7mateHobart.au | 7mate Hobart |
+| 9Hobart.au | 9 Hobart |
+| 9GEMHobart.au | 9GEM Hobart |
+| 9GO!Hobart.au | 9GO! Hobart |
+| 9LifeHobart.au | 9Life Hobart |
+| WINBOLDHobart.au | WIN BOLD Hobart |
+| WINPeachHobart.au | WIN Peach Hobart |
+| WINGOLDHobart.au | WIN GOLD Hobart |
+| ABCMelbourne.au | ABC Melbourne |
+| ABCKids_ABCTVPlusMelbourne.au | ABC Kids/ABC TV Plus Melbourne |
+| ABCMEMelbourne.au | ABC ME Melbourne |
+| ABCNewsMelbourne.au | ABC News Adelaide Adelaide Melbourne |
+| SBSMelbourne.au | SBS Melbourne |
+| SBSVicelandMelbourne.au | SBS Viceland Melbourne |
+| SBSFoodMelbourne.au | SBS Food Melbourne |
+| SBSWorldMoviesMelbourne.au | SBS World Movies Melbourne |
+| Channel7Melbourne.au | Channel 7 Melbourne |
+| Channel7BravoMelbourne.au | Channel 7 Bravo Melbourne |
+| 7TWOMelbourne.au | 7TWO Melbourne |
+| 7mateMelbourne.au | 7mate Melbourne |
+| 7FlixMelbourne.au | 7Flix Melbourne |
+| 9Melbourne.au | 9 Melbourne |
+| 9GoMelbourne.au | 9Go! Melbourne |
+| 9LifeMelbourne.au | 9Life Melbourne |
+| 9GemMelbourne.au | 9Gem Melbourne |
+| 9RushMelbourne.au | 9Rush Melbourne |
+| 10Melbourne.au | 10 Melbourne |
+| 10BOLDMelbourne.au | 10 BOLD Melbourne |
+| 10PeachMelbourne.au | 10 Peach Melbourne |
+| 10ShakeMelbourne.au | 10 Shake Melbourne |
+| RACINGcomMelbourne.au | RACING.COM Melbourne |
+| ABCTVPerth.au | ABC TV Perth |
+| ABCKids_ABCTVPlusPerth.au | ABC Kids/ABC TV Plus Perth |
+| ABCNewsPerth.au | ABC News Adelaide Adelaide Perth |
+| ABCMEPerth.au | ABC ME Perth |
+| SBSPerth.au | SBS Perth |
+| SBSVicelandPerth.au | SBS Viceland Perth |
+| SBSWorldMoviesPerth.au | SBS World Movies Perth |
+| SBSFoodPerth.au | SBS Food Perth |
+| 7Perth.au | 7 Perth |
+| 7BravoPerth.au | 7 Bravo Perth |
+| 7TWOPerth.au | 7TWO Perth |
+| 7matePerth.au | 7mate Perth |
+| 7FlixPerth.au | 7Flix Perth |
+| 9Perth.au | 9 Perth |
+| 9GoPerth.au | 9Go! Perth |
+| 9LifePerth.au | 9Life Perth |
+| 9GemPerth.au | 9Gem Perth |
+| 9RushPerth.au | 9Rush Perth |
+| 10Perth.au | 10 Perth |
+| 10BOLDPerth.au | 10 BOLD Perth |
+| 10PeachPerth.au | 10 Peach Perth |
+| 10ShakePerth.au | 10 Shake Perth |
+| RACINGcomPerth.au | RACING.COM Perth |
+| ABCSydney.au | ABC Sydney |
+| ABCKids_ABCTVPlusSydney.au | ABC Kids/ABC TV Plus Sydney |
+| ABCNewsSydney.au | ABC News Adelaide Adelaide Sydney |
+| ABCMESydney.au | ABC ME Sydney |
+| SBSFoodSydney.au | SBS Food Sydney |
+| SBSSydney.au | SBS Sydney |
+| 7Sydney.au | 7 Sydney |
+| 7BravoSydney.au | 7 Bravo Sydney |
+| 7TWOSydney.au | 7TWO Sydney |
+| 7mateSydney.au | 7mate Sydney |
+| 7FlixSydney.au | 7Flix Sydney |
+| Channel9Sydney.au | Channel 9 Sydney |
+| 9LifeSydney.au | 9Life Sydney |
+| 9GemSydney.au | 9Gem Sydney |
+| 9GoSydney.au | 9Go! Sydney |
+| 9RushSydney.au | 9Rush Sydney |
+| 10PeachSydney.au | 10 Peach Sydney |
+| 10Sydney.au | 10 Sydney |
+| 10BOLDSydney.au | 10 BOLD Sydney |
+| 10ShakeSydney.au | 10 Shake Sydney |
+| NITV.au | NITV |
+| NSW-SydneyFoxSportsUltra.au | Fox Sports Ultra |
+| MoviesLife.au | Movies Life |
+| MovieSphere.au | MovieSphere |
 
 ## Summary
 
-- **Total channels:** 131
-- **Foxtel channels:** ~100
-- **Free-to-Air channels:** ~46
+- **Total channels:** 371
+- **Foxtel channels:** ~127
+- **Free-to-Air channels:** ~207
 
 ## EPG File
 
@@ -150,4 +390,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-06-06 15:02 UTC*
+*Last updated: 2026-06-07 06:09 UTC*
