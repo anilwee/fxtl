@@ -377,11 +377,12 @@
 | NSW-SydneyFoxSportsUltra.au | Fox Sports Ultra |
 | MoviesLife.au | Movies Life |
 | MovieSphere.au | MovieSphere |
+| ESPN.au | ESPN |
 
 ## Summary
 
-- **Total channels:** 371
-- **Foxtel channels:** ~127
+- **Total channels:** 372
+- **Foxtel channels:** ~128
 - **Free-to-Air channels:** ~207
 
 ## EPG File
@@ -390,4 +391,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-06-09 16:23 UTC*
+*Last updated: 2026-06-10 06:10 UTC*
