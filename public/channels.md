@@ -378,12 +378,14 @@
 | MoviesLife.au | Movies Life |
 | MovieSphere.au | MovieSphere |
 | ESPN.au | ESPN |
+| euronews.au | euronews |
+| SBSKickOff.au | SBS KickOff |
 
 ## Summary
 
-- **Total channels:** 372
+- **Total channels:** 374
 - **Foxtel channels:** ~128
-- **Free-to-Air channels:** ~207
+- **Free-to-Air channels:** ~208
 
 ## EPG File
 
@@ -391,4 +393,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-06-13 06:04 UTC*
+*Last updated: 2026-06-13 15:22 UTC*
