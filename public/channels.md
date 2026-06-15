@@ -248,7 +248,6 @@
 | 9GoBrisbane.au | 9Go! Brisbane |
 | 9LifeBrisbane.au | 9Life Brisbane |
 | 9GemBrisbane.au | 9Gem Brisbane |
-| 9RushBrisbane.au | 9Rush |
 | 10Brisbane.au | 10 Brisbane |
 | 10BOLDBrisbane.au | 10 BOLD Brisbane |
 | 10PeachBrisbane.au | 10 Peach Brisbane |
@@ -377,15 +376,15 @@
 | NSW-SydneyFoxSportsUltra.au | Fox Sports Ultra |
 | MoviesLife.au | Movies Life |
 | MovieSphere.au | MovieSphere |
-| ESPN.au | ESPN |
 | euronews.au | euronews |
 | SBSKickOff.au | SBS KickOff |
+| ESPN.au | ESPN |
 
 ## Summary
 
-- **Total channels:** 374
+- **Total channels:** 373
 - **Foxtel channels:** ~128
-- **Free-to-Air channels:** ~208
+- **Free-to-Air channels:** ~207
 
 ## EPG File
 
@@ -393,4 +392,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-06-14 15:30 UTC*
+*Last updated: 2026-06-15 07:04 UTC*
