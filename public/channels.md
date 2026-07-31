@@ -142,9 +142,6 @@
 | RACINGCOM.au | RACING.COM |
 | SKYRacing2.au | SKY Racing 2 |
 | SKYRacing1.au | SKY Racing 1 |
-| SKYNewsUK.au | SKY News UK |
-| SkyNewsAustralia.au | Sky News Australia |
-| SkyNewsExtra.au | Sky News Extra |
 | FOXTELOne.au | FOXTEL One |
 | UKTV.au | UKTV |
 | LifeStyle.au | LifeStyle |
@@ -382,8 +379,8 @@
 
 ## Summary
 
-- **Total channels:** 373
-- **Foxtel channels:** ~128
+- **Total channels:** 370
+- **Foxtel channels:** ~127
 - **Free-to-Air channels:** ~207
 
 ## EPG File
@@ -392,4 +389,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-07-30 04:42 UTC*
+*Last updated: 2026-07-31 05:19 UTC*
