@@ -6,6 +6,7 @@
 
 | Channel ID | Clean Display Name |
 |------------|-------------------|
+| FoxSportsUHD1.au | Fox Sports UHD 1 |
 | AdelaideUnited.a-league | A-LEAGUE - Adelaide United |
 | AucklandFC.a-league | A-LEAGUE - Auckland FC |
 | BrisbaneRoar.a-league | A-LEAGUE - Brisbane Roar |
@@ -159,6 +160,7 @@
 | DiscoveryChannel.au | Discovery Channel |
 | DiscoveryTurbo.au | Discovery Turbo |
 | DiscoveryTurbo+2.au | Discovery Turbo +2 |
+| ESPN.au | ESPN |
 | ESPNPlay1.au | ESPN Play 1 |
 | ESPNPlay10.au | ESPN Play 10 |
 | ESPNPlay100.au | ESPN Play 100 |
@@ -375,11 +377,10 @@
 | Dragons.nrlw | NRLW - St. George Illawarra Dragons |
 | BBCEntertain.us | US - BBC Entertain |
 | BBCSelect.us | US - BBC Select |
-| ESPN.au | ESPN |
 
 ## Summary
 
-- **Total channels:** 370
+- **Total channels:** 371
 - **Foxtel channels:** ~127
 - **Free-to-Air channels:** ~207
 
@@ -389,4 +390,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-08-07 04:15 UTC*
+*Last updated: 2026-08-07 14:42 UTC*
