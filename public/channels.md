@@ -390,4 +390,4 @@ The EPG XML file is available at:
 
 
 ---
-*Last updated: 2026-10-01 19:05 UTC*
+*Last updated: 2026-10-02 07:35 UTC*
